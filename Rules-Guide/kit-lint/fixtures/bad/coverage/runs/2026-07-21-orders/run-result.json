@@ -1,0 +1,14 @@
+{
+  "runId": "2026-07-21-orders",
+  "date": "2026-07-21",
+  "discipline": "checklist",
+  "env": "staging",
+  "verdict": "fail",
+  "oracle": {
+    "type": "spec",
+    "source": "checklist expected results"
+  },
+  "bugs": [
+    "BUG-002"
+  ]
+}

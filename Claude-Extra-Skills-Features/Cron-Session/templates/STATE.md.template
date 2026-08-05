@@ -1,0 +1,17 @@
+# <run name> — recurring-driver state
+
+STATUS: IN_PROGRESS
+<!-- The driver halts (and DELETES its own plist) the moment the line above reads exactly
+     `STATUS: COMPLETE`. Set it only when the WHOLE task is genuinely done. -->
+
+## Authorization (required for unattended writes)
+- Task: <one line — what this unattended run is completing>
+- Authorized by: <owner> on <date>
+- Writes ONLY to: <staging/dev sheet or artifact target — never production>
+
+## Done
+- <finished items / rounds — the agent appends here each fire>
+
+## Next
+- <the exact next step a fresh headless agent should take>
+- <if blocked: name the blocker here and do NOT fake progress>

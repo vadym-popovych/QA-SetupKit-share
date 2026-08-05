@@ -1,0 +1,27 @@
+{
+  "$comment": "TEMPLATE bug spec — BE (BACKEND/API) defect → write from the API perspective: preconditions = environment + auth (uid/creds) + the affected entity ids; steps = the exact calls (authenticate, then METHOD /endpoint, + the request body for POST/PUT, then inspect the response); actual/expected = the RESPONSE fields (e.g. coverUrl = null), not a screen. A backend dev reproduces by calling the API. Two labeled evidence lines (API response + app screen). Placeholders <...> filled per project; no project names/ids ship in the kit.",
+  "id": "BUG-002",
+  "subject": "No cover image URLs returned by the GET item endpoints after generation",
+  "layer": "BE",
+  "priority": "Normal",
+  "preconditions": [
+    "Dev environment: <dev API base URL>",
+    "Auth as uid <uid> (<test account email> Password: <password>)",
+    "Item <entity id> (\"<title>\", created dd.mm, generated <N>/<M>)"
+  ],
+  "steps": [
+    "GET /<items> — check coverUrl of item <entity id>",
+    "GET /<items>/<entity id>/<children> — check coverUrl of every child",
+    "GET /<items>/<entity id>/status — check the generation state"
+  ],
+  "actual": "GET /<items> returns coverUrl = null, and the children endpoint returns coverUrl = null for every child, including the ones already generated (status completed).",
+  "expected": "coverUrl fields hold image URLs for the generated content; not-yet-generated children may stay null.",
+  "screenshots": [
+    { "label": "Screenshot with response from Api", "url": "<Mega link to the API response>" },
+    { "label": "Screenshot from Application", "url": "<Mega link to the app screen>" }
+  ],
+  "notes": [
+    "The defect applies only to this item — the user's previous items do not have it (<other entity ids>).",
+    "In the mobile app this renders as placeholder covers on the list and detail screens (see \"Screenshot from Application\")."
+  ]
+}

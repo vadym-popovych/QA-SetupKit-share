@@ -1,0 +1,33 @@
+{
+  "$comment": "Machine form of RTM.md — validates against Rules-Guide/schemas/coverage.schema.json. Example for an ExampleApp-like project.",
+  "project": "ExampleApp",
+  "asOf": "2026-07-10",
+  "strategyRevision": "2026-07-07",
+  "units": [
+    {
+      "id": "S1",
+      "risk": 6,
+      "targetDepth": "standard",
+      "state": "covered",
+      "lastRun": "2026-07-10-build14-checklist",
+      "openBugs": []
+    },
+    {
+      "id": "E1",
+      "risk": 9,
+      "targetDepth": "deep",
+      "state": "partial",
+      "lastRun": "2026-07-10-load",
+      "openBugs": ["BUG-002", "BUG-003"],
+      "reason": "load run failed thresholds; generation stall unresolved"
+    },
+    {
+      "id": "I1",
+      "risk": 6,
+      "targetDepth": "standard",
+      "state": "not-run",
+      "reason": "time-boxed out of round build-14 (recorded in plan Not run)"
+    }
+  ],
+  "gaps": ["E1"]
+}

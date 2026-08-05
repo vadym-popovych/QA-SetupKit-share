@@ -1,0 +1,80 @@
+{
+  "$comment": "Self-healing locators rubric config — pilot-ready example shaped after a CRM-platform pilot (Creatio-style UI). IMPORTANT: all paths in this file are resolved RELATIVE TO THE CONFIG FILE for projectDir, and RELATIVE TO projectDir for everything else. CANONICAL location: copy to <Project>/UI-Automation/rubric.config.json and SET projectDir FOR YOUR LOCATION ('.' when the config sits next to the artefacts) — this name is auto-found without --config and gitignored (real creds). `$comment` keys are ignored everywhere.",
+
+  "projectDir": "./UI-Automation",
+
+  "baseUrl": "https://crm.example.com",
+
+  "auth": {
+    "$comment": "mode 'api' = POST auth.url, cookies land in the browser context (Creatio AuthService pattern); Supervisor/Supervisor are public test-stand creds — OK in this example, real project creds belong in a gitignored copy. userField/passwordField default to UserName/UserPassword. mode 'none' = skip auth.",
+    "mode": "api",
+    "url": "/ServiceModel/AuthService.svc/Login",
+    "user": "Supervisor",
+    "password": "Supervisor",
+    "userField": "UserName",
+    "passwordField": "UserPassword",
+    "successField": "Code",
+    "successValue": 0
+  },
+
+  "locatorsDir": "locators",
+  "pageObjectsDir": "page-objects",
+  "locatorsDoc": "LOCATORS.md",
+  "baselineDir": "rubric-baseline",
+  "verdictsDir": "rubric-verdicts",
+  "skipFiles": [],
+
+  "$comment-allowlist": "R0 guard is DEFAULT-DENY: every file under projectDir is checksummed at loop start EXCEPT those matching this allowlist (the only files the FIXER may edit) and the rubric's own baselineDir/verdictsDir. Any changed/deleted/NEW file outside the allowlist = abort. Globs relative to projectDir; a pattern without '/' matches at any depth.",
+  "allowlist": ["locators/*.json", "page-objects/*.ts", "LOCATORS.md"],
+
+  "$comment-offLimits": "Extra EXPLICIT protection on top of default-deny: files matching these globs are guarded EVEN IF they also match the allowlist. Use to pin especially sensitive files.",
+  "offLimits": ["tests/**", "**/*.spec.ts", "**/*.test.ts", "tools/**", "README.md", "dom-snapshots/**", "screenshots/**"],
+
+  "testCommand": null,
+  "$comment-testCommand": "R3 — full Playwright suite command run from projectDir, e.g. 'npx playwright test'. null = R3 reported as skipped (not failed) — the pilot had locator artefacts but no spec suite yet.",
+
+  "settleMs": 12000,
+  "navTimeoutMs": 90000,
+  "readyTimeoutMs": 60000,
+  "viewport": { "width": 1680, "height": 950 },
+  "ignoreHTTPSErrors": true,
+
+  "readySelectors": {
+    "$comment": "URL-substring -> element to await before counting locators (Freedom UI renders 10-15s after networkidle). First matching substring wins; no match = settleMs wait only.",
+    "_ListPage": "crt-grid",
+    "NuiLogin": "#loginEdit-el"
+  },
+
+  "preAuthGroups": ["common.json#login"],
+  "$comment-preAuthGroups": "Groups verified BEFORE the API login (the login form redirects to Shell once authenticated).",
+
+  "urlOverrides": {
+    "$comment": "R1 page mapping per '<file>#<topLevelGroup>'. Missing entry -> the group's own 'url' field is used if placeholder-free; explicit null -> group skipped-with-notice (e.g. form pages needing a record GUID — paste a real edit URL like /0/Shell/#Card/Products_FormPage/edit/<GUID> to enable them; modal groups need a click, direct hash-modal URLs MAY work: /0/Shell/#Section/Products_ListPage[modal=Products_MiniPage/add]).",
+    "common.json#shell": "/0/Shell/#Section/Products_ListPage",
+    "common.json#listPage": "/0/Shell/#Section/Products_ListPage",
+    "common.json#formPage": null,
+    "common.json#miniPage": null,
+    "products.json#addMiniPage": null,
+    "products.json#formPage": null,
+    "production-lines.json#formPage": null,
+    "production-orders.json#formPage": null
+  },
+
+  "samples": {
+    "$comment": "Placeholder -> sample value for template locators containing <...>. Keys must match the placeholder EXACTLY, including angle brackets. Values below use the demo records noted in the project's own LOCATORS.md.",
+    "<Колонка>": "Назва",
+    "<Назва розділу>": "Продукти",
+    "<назва продукту>": "Motherboard UT165LZ-32P1 (sample)",
+    "<назва лінії>": "Лінія 04774",
+    "<назва запису>": "Motherboard UT165LZ-32P1 (sample)",
+    "<N>": "1"
+  },
+
+  "multiAllowed": [
+    "common.json#listPage.rowLink",
+    "common.json#listPage.rowCheckbox",
+    "common.json#listPage.inlineAddRow",
+    "*#*.openRecordByName"
+  ],
+  "$comment-multiAllowed": "Entry ids ('<file>#<keyPath>', '*' wildcard allowed) where matching MORE than one element still passes R1 (count >= 1) — e.g. one record link per grid row. Everything else must resolve to EXACTLY ONE element."
+}

@@ -1,0 +1,96 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://qa-setupkit/schemas/link-ledger.schema.json",
+  "title": "Link ledger — the recorded identity of every re-creatable artefact in a project",
+  "description": "One file per project (<Project>/.link-ledger.json), written and read by Rules-Guide/link-ledger/link-ledger.mjs. It exists because 'update the artefact, do not recreate it' is invisible in the UI: a trashed-and-recreated doc or tab looks identical to an updated one, while every shared link, bookmark and #gid= reference to it is already dead. Entries are keyed by PURPOSE (kind + key), never by title — a title changes legitimately (dates, rounds), an id must not. This ledger holds real file ids of a real project, so it is a PROJECT artefact and never kit content.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "entries"],
+  "properties": {
+    "$comment": {
+      "type": "string",
+      "description": "Free annotation. The one reserved instance-level comment field."
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1,
+      "description": "Ledger format version. A reader that does not know the version must refuse rather than guess."
+    },
+    "entries": {
+      "type": "array",
+      "description": "One entry per carrier. Order is not meaningful (the writer keeps it sorted by kind+key so a diff stays readable).",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "key", "id", "firstSeen", "lastSeen"],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": ["sheet", "sheet-tab", "doc", "report", "folder"],
+            "description": "What the carrier is. `sheet-tab` pairs an `id` (the spreadsheet) with a `gid` (the tab) — both must survive a rebuild, because shared links carry the gid."
+          },
+          "key": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The PURPOSE of the carrier, stable across rebuilds and renames: e.g. `bug-summary/Statistic`, `test-report/doc`, `pagespeed/round-tab`. Two artefacts serving the same purpose in the same project is a contradiction, not two entries."
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The id that must not change: a Drive fileId, a documentId, a report URL slug. This is the whole point of the file."
+          },
+          "gid": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Sheet tab id, where the carrier has one. A rebuilt tab that gets a NEW gid silently kills every shared #gid= link even though the spreadsheet id is unchanged — so a moved gid is a break exactly like a moved id."
+          },
+          "title": {
+            "type": "string",
+            "description": "Last seen human title. Informational ONLY — it may drift (dates, rounds) and drift is never a violation."
+          },
+          "firstSeen": {
+            "type": "string",
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}",
+            "description": "ISO timestamp of the first sighting — the date the promise started."
+          },
+          "lastSeen": {
+            "type": "string",
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}",
+            "description": "ISO timestamp of the last confirmed match. A carrier nobody has written for a long time is a candidate for review, never an automatic re-point."
+          },
+          "adoptions": {
+            "type": "array",
+            "description": "Deliberate re-points (LINK_LEDGER_ADOPT=1), newest last. Kept because a re-point is not an error to be erased: it is a decision someone made, and whoever still holds the old link deserves to be findable in the record.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["at", "fromId"],
+              "properties": {
+                "at": {
+                  "type": "string",
+                  "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}",
+                  "description": "When the re-point happened."
+                },
+                "fromId": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "The id that was abandoned — every link to it is now dead."
+                },
+                "fromGid": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "The tab id that was abandoned, where the carrier had one."
+                },
+                "reason": {
+                  "type": "string",
+                  "description": "Why the move was authorised. Optional in the schema, expected in practice: an adoption nobody can explain is indistinguishable from the accident this file exists to catch."
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

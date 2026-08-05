@@ -1,0 +1,155 @@
+{
+  "_comment": "Reasoned exceptions for kit-lint. EVERY entry carries a reason. An allowlist without reasons rots into a dumping ground for 'we'll fix it later' — and then the lint means nothing, exactly like a gate everyone clicks through. Adding an entry is a decision; deleting one is always allowed.",
+  "entries": [
+    {
+      "check": "L2",
+      "file": "Testing-Types/Load-Testing/LOAD_TESTING_RULES.md",
+      "match": "book-variants.js",
+      "reason": "Project-side k6 library, not a kit tool. The RULES cite it while describing the reference harness (<Project>) — it is an illustration of how a project structures its own lib/, not an instruction to run a file the clone should have."
+    },
+    {
+      "check": "L2",
+      "file": "Testing-Types/Load-Testing/LOAD_TESTING_RULES.md",
+      "match": "functions/_middleware.js",
+      "reason": "Cloudflare Pages Functions middleware living in the report-hosting repo (qa-public-reports), not in QA-SetupKit. Named so the reader knows where Basic Auth is enforced; the kit does not ship or run it."
+    },
+    {
+      "check": "L3",
+      "file": "Rules-Guide/Roadmap/AI-QA-ROADMAP.md",
+      "match": "/Users/vadym/",
+      "reason": "The audit entry (#21) QUOTES the offending paths as evidence of the portability problem it describes. Rewriting the quote would erase the finding it documents."
+    },
+    {
+      "check": "L2",
+      "file": "MCP-configurations/mega/README.md",
+      "match": "backup-secrets.sh",
+      "reason": "Same as above — owner-only backup infra, never shipped."
+    },
+    {
+      "check": "L2",
+      "file": "QA-Documentation/Bug-Reports/REDMINE_WORKFLOW.md",
+      "match": "backup-secrets.sh",
+      "reason": "Same as above — owner-only backup infra."
+    },
+    {
+      "check": "L2",
+      "file": "Rules-Guide/kit-lint/README.md",
+      "match": "backup-knowledge.sh",
+      "reason": "Owner-machine backup script (claude-workspace-config); referenced to say WHERE the lint runs daily, not as a tool a teammate runs."
+    },
+    {
+      "check": "L2",
+      "file": "Rules-Guide/Roadmap/AI-QA-ROADMAP.md",
+      "match": "backup-qa-setupkit.sh",
+      "reason": "Owner-machine backup script; the roadmap records where the self-tests were wired in."
+    },
+    {
+      "check": "L2",
+      "file": "Testing-Types/Security-Testing/SETUP.md",
+      "match": "zap-baseline.py",
+      "reason": "Third-party: ships INSIDE the OWASP ZAP docker image (zaproxy/zap-stable). Not ours to vendor."
+    },
+    {
+      "check": "L2",
+      "file": "Testing-Types/Security-Testing/SETUP.md",
+      "match": "zap-full-scan.py",
+      "reason": "Third-party: OWASP ZAP docker image."
+    },
+    {
+      "check": "L2",
+      "file": "Testing-Types/Security-Testing/SECURITY_TESTING_RULES.md",
+      "match": "zap-baseline.py",
+      "reason": "Third-party: OWASP ZAP docker image."
+    },
+    {
+      "check": "L2",
+      "file": "Testing-Types/Security-Testing/SECURITY_TESTING_RULES.md",
+      "match": "zap-full-scan.py",
+      "reason": "Third-party: OWASP ZAP docker image."
+    },
+    {
+      "check": "L2",
+      "file": "Testing-Types/Security-Testing/CLAUDE.starter.md",
+      "match": "zap-baseline.py",
+      "reason": "Third-party: OWASP ZAP docker image."
+    },
+    {
+      "check": "L2",
+      "file": "Testing-Types/Security-Testing/CLAUDE.starter.md",
+      "match": "zap-full-scan.py",
+      "reason": "Third-party: OWASP ZAP docker image."
+    },
+    {
+      "check": "L8",
+      "file": "QA-Documentation/Custom-Reports/PageSpeed-report/template/pages.example.json",
+      "match": "no-schema",
+      "reason": "psi-run.mjs input (page list); the tool fails closed on a bad shape. No schema yet (05/08/2026)."
+    },
+    {
+      "check": "L8",
+      "file": "Testing-Types/API-Testing/template/config.example.json",
+      "match": "no-schema",
+      "reason": "api-run config; consumed by the kit tool, which refuses without required keys. No schema yet (05/08/2026)."
+    },
+    {
+      "check": "L8",
+      "file": "Testing-Types/API-Testing/template/suite.example.json",
+      "match": "no-schema",
+      "reason": "API suite definition; consumed by the kit tool. No schema yet (05/08/2026)."
+    },
+    {
+      "check": "L8",
+      "file": "Testing-Types/App-Emulators-configurations/template/config.example.json",
+      "match": "no-schema",
+      "reason": "Emulator run config; consumed by the kit tooling. No schema yet (05/08/2026)."
+    },
+    {
+      "check": "L8",
+      "file": "Testing-Types/App-Emulators-configurations/template/mapping.example.json",
+      "match": "no-schema",
+      "reason": "Checklist row↔screen mapping input. No schema yet (05/08/2026)."
+    },
+    {
+      "check": "L8",
+      "file": "Testing-Types/Load-Testing/template/tools/run-doc.example.json",
+      "match": "no-schema",
+      "reason": "RUN_DOC_CONTENT input for write-run-doc.mjs (the renderer refuses without it). No schema yet (05/08/2026)."
+    },
+    {
+      "check": "L8",
+      "file": "Testing-Types/Load-Testing/template/users.example.json",
+      "match": "no-schema",
+      "reason": "Account-pool shape (users.json is gitignored; this is its teaching copy). No schema yet (05/08/2026)."
+    },
+    {
+      "check": "L8",
+      "file": "Testing-Types/Security-Testing/template/config.example.json",
+      "match": "no-schema",
+      "reason": "ZAP wrapper config; consumed by the kit tool. No schema yet (05/08/2026)."
+    },
+    {
+      "check": "L8",
+      "file": "Testing-Types/UI-Automation/rubric/config.example.json",
+      "match": "no-schema",
+      "reason": "Rubric config (project copy is gitignored). No schema yet (05/08/2026)."
+    },
+    {
+      "check": "L8",
+      "file": "Testing-Types/UI-Automation/template/config.example.json",
+      "match": "no-schema",
+      "reason": "Capture/locator config; consumed by the kit tool. No schema yet (05/08/2026)."
+    },
+    {
+      "check": "L8",
+      "file": "Testing-Types/UI-Automation/template/e2e/package.example.json",
+      "match": "no-schema",
+      "reason": "An npm package.json template — its contract is npm's, not a kit schema."
+    },
+    {
+      "check": "L8",
+      "file": "Claude-Extra-Skills-Features/Memory-Eval/scenarios.example.json",
+      "match": "no-schema",
+      "reason": "Eval scenario list; consumed by the Memory-Eval harness. No schema yet (05/08/2026)."
+    }
+  ]
+}

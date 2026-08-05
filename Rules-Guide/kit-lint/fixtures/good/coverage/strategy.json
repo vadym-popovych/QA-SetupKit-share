@@ -1,0 +1,73 @@
+{
+  "$comment": "FIXTURE \u2014 deliberately minimal strategy for the coverage-check self-test. Not a template.",
+  "project": "ExampleApp",
+  "strategyRevision": "2026-07-20",
+  "status": "approved",
+  "scope": {
+    "in": [
+      {
+        "id": "S1",
+        "unit": "Sign-in screen",
+        "type": "screen"
+      },
+      {
+        "id": "E1",
+        "unit": "POST /orders",
+        "type": "endpoint"
+      },
+      {
+        "id": "I1",
+        "unit": "Payment provider",
+        "type": "integration"
+      },
+      {
+        "id": "R1",
+        "unit": "Admin role",
+        "type": "role"
+      }
+    ]
+  },
+  "riskMatrix": [
+    {
+      "id": "S1",
+      "fear": "users cannot sign in",
+      "likelihood": 2,
+      "impact": 3,
+      "risk": 6,
+      "depth": "standard"
+    },
+    {
+      "id": "E1",
+      "fear": "orders lost under load",
+      "likelihood": 3,
+      "impact": 3,
+      "risk": 9,
+      "depth": "deep"
+    },
+    {
+      "id": "I1",
+      "fear": "payment mis-charge",
+      "likelihood": 2,
+      "impact": 3,
+      "risk": 6,
+      "depth": "standard"
+    },
+    {
+      "id": "R1",
+      "fear": "admin actions leak to members",
+      "likelihood": 1,
+      "impact": 3,
+      "risk": 3,
+      "depth": "smoke"
+    }
+  ],
+  "entryCriteria": [
+    "staging reachable"
+  ],
+  "exitCriteria": [
+    "no open P0"
+  ],
+  "stopConditions": [
+    "exit-criteria-met"
+  ]
+}

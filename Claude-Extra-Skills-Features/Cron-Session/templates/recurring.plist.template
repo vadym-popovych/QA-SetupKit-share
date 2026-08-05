@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Fill the __PLACEHOLDERS__, save as ~/Library/LaunchAgents/<label>.plist, then:
+       launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/<label>.plist
+     Disarm early:  touch <DRIVER_DIR>/recurring.stop   (the driver deletes its own plist).
+     __INTERVAL_SECONDS__ e.g. 7200 = every 2h. RunAtLoad is false so it does not fire the
+     instant it loads at login; it waits one interval. -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>__LABEL__</string>
+  <key>ProgramArguments</key><array>
+    <string>/bin/zsh</string>
+    <string>__DRIVER_SH__</string>
+  </array>
+  <key>EnvironmentVariables</key><dict>
+    <key>DRIVER_LABEL</key><string>__LABEL__</string>
+    <key>DRIVER_DIR</key><string>__DRIVER_DIR__</string>
+    <key>WORKDIR</key><string>__WORKDIR__</string>
+  </dict>
+  <key>StartInterval</key><integer>__INTERVAL_SECONDS__</integer>
+  <key>StandardOutPath</key><string>__DRIVER_DIR__/recurring-logs/launchd.out</string>
+  <key>StandardErrorPath</key><string>__DRIVER_DIR__/recurring-logs/launchd.err</string>
+  <key>RunAtLoad</key><false/>
+</dict></plist>

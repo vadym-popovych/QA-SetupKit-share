@@ -1,0 +1,25 @@
+{
+  "id": "TC-001",
+  "title": "Login rejects password one char below minimum length (boundary B-1)",
+  "area": "Authentication & Onboarding",
+  "preconditions": ["user account exists", "app is on the Login screen"],
+  "steps": [
+    "enter a valid e-mail",
+    "enter a 5-character password (minimum is 6)",
+    "tap Sign in"
+  ],
+  "expected": "inline validation error 'Password must be at least 6 characters'; no auth request is sent",
+  "oracle": {
+    "type": "spec",
+    "source": "figma:123-456 (error state) + API contract: POST /auth/login not called"
+  },
+  "priority": "Medium",
+  "technique": "boundary-value",
+  "traceability": {
+    "figmaNode": "123-456",
+    "endpoint": "POST /auth/login",
+    "strategyUnit": "S1",
+    "risk": 6
+  },
+  "status": "ready"
+}

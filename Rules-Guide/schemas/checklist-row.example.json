@@ -1,0 +1,48 @@
+{
+  "$comment": [
+    "One checklist check row — the machine form of a v5 checklist Sheet line. It ships as an example",
+    "because until 28/07/2026 this was the ONLY schema in the kit with no example at all, which meant",
+    "kit-lint L8 (every shipped example validates against its schema) exercised the shape zero times.",
+    "",
+    "The row is deliberately an AWKWARD one rather than a clean pass, because the clean case teaches",
+    "nothing: it shows one platform Failed and another Skipped in the same round, which is where the",
+    "status vocabulary is easiest to get wrong.",
+    "",
+    "`statuses` is ONE ENTRY PER PLATFORM SUB-COLUMN, in block order (here: iOS, Android). The Sheet",
+    "dropdown knows exactly four values and no others:",
+    "  'Passed'  — something objective said so; name it in the oracle.",
+    "  'Failed'  — a real defect; the comment carries the BUG-NNN link.",
+    "  'Skipped' — will NOT be run on this platform (feature absent, screen unreachable, blocked and",
+    "              not going to unblock). A DECISION, so a reason is mandatory.",
+    "  ''        — not run YET this round. Temporary, and still requires a comment saying why.",
+    "'Partial' is a real and visible value of a checklist row — just not of THIS field. It belongs to",
+    "the row's computed RESULT column (amber), which the Sheet derives per block: Failed short-circuits,",
+    "then Partial when some active platform is still empty, then Passed / Skipped / ''. That column's",
+    "vocabulary is free precisely because nobody types into it. So: writing 'Partial' into `statuses`",
+    "is what fabricates a verdict — a human declaring the summary instead of letting it be derived.",
+    "",
+    "And that is why this schema carries no `result` field at all. The result is DERIVABLE from",
+    "`statuses` plus which platforms are active this round, and a derived value stored beside its",
+    "inputs is a value that will eventually disagree with them — the same reason the RTM is a",
+    "projection and a test report's counts are computed rather than typed. If you need the result in",
+    "a machine form, recompute it; do not persist it here.",
+    "",
+    "`check` should imply its own oracle ('matches Figma node X', 'matches the spec'), so a reader can",
+    "tell what would decide it before running anything — a check nobody can decide is not a check."
+  ],
+
+  "page": "Sign-in",
+  "section": "State — invalid credentials",
+  "check": "Wrong password shows the inline error under the field and keeps the entered email",
+
+  "statuses": ["Failed", "Skipped"],
+
+  "comment": "iOS: the error appears at the top of the screen instead of under the field and the email is cleared — BUG-014. Android: skipped this round — the build ships with the new sign-in behind a feature flag that is off on staging, so the screen is unreachable rather than broken.",
+
+  "bugRef": "BUG-014",
+
+  "oracle": {
+    "type": "spec",
+    "source": "sign-in error-state design + the acceptance criterion 'entered email is preserved'"
+  }
+}

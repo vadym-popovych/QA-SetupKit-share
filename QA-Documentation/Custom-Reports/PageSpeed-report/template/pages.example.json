@@ -1,0 +1,24 @@
+{
+  "$comment": "Copy to pages.json next to psi-run.mjs (or point at it with --pages / $PSI_PAGES) and replace EVERY value below with your own. This is the inventory the report is built from: `sections` become the section bands in the Sheet (in this order), `pages` become the page blocks under them (in this order), and `id` is the permanent key the Sheet carries rounds over by — rename an id and you orphan its history. `path` is joined to `baseUrl`, so pointing baseUrl at staging vs production is what makes a round a staging round or a production round; the env you pass to psi-run.mjs (--env) must match the host you are actually measuring, because a staging number and a production number are not comparable. runsPerPage 3 is the floor, not a suggestion: one Lighthouse load is noise, the cell carries the median of the runs, and fewer successful runs than this target is recorded as 'not-run' — never as a partial green number.",
+  "project": "Example Project",
+  "baseUrl": "https://staging.example.com",
+  "sections": [
+    {
+      "name": "Marketing Pages",
+      "pages": [
+        { "id": "home", "name": "Home", "path": "/" },
+        { "id": "pricing", "name": "Pricing", "path": "/pricing" },
+        { "id": "contact", "name": "Contact", "path": "/contact" }
+      ]
+    },
+    {
+      "name": "Product Pages",
+      "pages": [
+        { "id": "product-list", "name": "Product list", "path": "/products" },
+        { "id": "product-detail", "name": "Product detail", "path": "/products/example-item" }
+      ]
+    }
+  ],
+  "platforms": ["desktop", "mobile"],
+  "runsPerPage": 3
+}

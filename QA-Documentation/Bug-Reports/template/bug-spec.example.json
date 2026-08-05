@@ -1,0 +1,25 @@
+{
+  "$comment": "TEMPLATE bug spec — App/FE (FRONTEND) defect → write from the USER's perspective: preconditions = install build + log in; steps = the UI journey (navigate / tap / swipe / open); actual/expected = what the user SEES. ONE spec feeds both outputs: redmine-bug.mjs → the board ticket (Textile), and bug-row.mjs → the Sheet row / candidate. Copy, fill, remove placeholders. Keep it developer-facing: short facts, no QA-internal taxonomy (severity/priority/invariant/tags live in the QA record, not the ticket body).",
+  "id": "BUG-001",
+  "subject": "The Notifications screen shows hardcoded mock data instead of real user notifications",
+  "layer": "App",
+  "priority": "Normal",
+  "preconditions": [
+    "Install Dev build v. xx.x.x (xx)",
+    "Login to any account or create new account"
+  ],
+  "steps": [
+    "Navigate to the Home screen",
+    "Tap the bell icon in the top-right corner",
+    "Check the content of the Notifications (Updates) screen"
+  ],
+  "actual": "The \"Notifications\" screen renders hardcoded mock data that does not change regardless of the account's real activity.",
+  "expected": "The screen shows the user's real notifications, or an empty state when there are none.",
+  "screenshots": [
+    "<Mega link to the screenshot>"
+  ],
+  "notes": [
+    "Reproduced on iOS (<device> simulator, dev flavor).",
+    "On Android the screen could not be auto-verified: the bell icon has no accessibility id (suggestion for devs — add one; it also unblocks UI automation)."
+  ]
+}

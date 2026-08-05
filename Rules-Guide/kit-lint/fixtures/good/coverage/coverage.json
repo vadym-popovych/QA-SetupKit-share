@@ -1,0 +1,43 @@
+{
+  "project": "ExampleApp",
+  "asOf": "2026-07-21",
+  "strategyRevision": "2026-07-20",
+  "units": [
+    {
+      "id": "S1",
+      "risk": 6,
+      "targetDepth": "standard",
+      "state": "covered",
+      "lastRun": "2026-07-21-signin",
+      "openBugs": []
+    },
+    {
+      "id": "E1",
+      "risk": 9,
+      "targetDepth": "deep",
+      "state": "partial",
+      "lastRun": "2026-07-21-orders",
+      "openBugs": [
+        "BUG-002"
+      ],
+      "reason": "load thresholds crossed; order stall unresolved"
+    },
+    {
+      "id": "I1",
+      "risk": 6,
+      "targetDepth": "standard",
+      "state": "not-run",
+      "reason": "time-boxed out of this round (recorded in the plan)"
+    },
+    {
+      "id": "R1",
+      "risk": 3,
+      "targetDepth": "smoke",
+      "state": "blocked",
+      "reason": "no admin account on staging"
+    }
+  ],
+  "gaps": [
+    "E1"
+  ]
+}

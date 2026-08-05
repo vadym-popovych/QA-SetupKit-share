@@ -1,0 +1,11 @@
+{
+  "runId": "2026-07-21-signin",
+  "date": "2026-07-21",
+  "discipline": "checklist",
+  "env": "staging",
+  "verdict": "pass",
+  "oracle": {
+    "type": "spec",
+    "source": "checklist expected results"
+  }
+}

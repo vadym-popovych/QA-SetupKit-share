@@ -1,0 +1,213 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "qa-setupkit/run-result.schema.json",
+  "title": "Test run result (any discipline)",
+  "type": "object",
+  "required": [
+    "runId",
+    "date",
+    "discipline",
+    "env",
+    "verdict"
+  ],
+  "properties": {
+    "runId": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}-[a-z0-9][a-z0-9-]*$",
+      "$comment": "e.g. 2026-07-06-repro-bug002"
+    },
+    "date": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}"
+    },
+    "discipline": {
+      "enum": [
+        "load",
+        "api",
+        "emulator",
+        "security",
+        "ui-automation",
+        "checklist",
+        "exploratory",
+        "accessibility",
+        "visual-regression",
+        "regression",
+        "localization",
+        "compatibility",
+        "web"
+      ]
+    },
+    "scenario": {
+      "type": "string",
+      "$comment": "e.g. 'slot-fill (fill free slots → parallel generate → full read)'"
+    },
+    "env": {
+      "type": "string",
+      "$comment": "staging/dev base URL or build id — NEVER production"
+    },
+    "method": {
+      "enum": [
+        "local",
+        "cloud",
+        "manual",
+        "agent",
+        "ci"
+      ]
+    },
+    "planRef": {
+      "type": "string",
+      "$comment": "path to the Test-Strategy plan file this run executes, if any"
+    },
+    "metrics": {
+      "type": "object",
+      "$comment": "discipline-specific: k6 percentiles, checks passed/failed, pages statused…",
+      "additionalProperties": {
+        "type": [
+          "number",
+          "string",
+          "boolean"
+        ]
+      }
+    },
+    "thresholds": {
+      "type": "object",
+      "properties": {
+        "passed": {
+          "type": "boolean"
+        },
+        "crossed": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "verdict": {
+      "enum": [
+        "pass",
+        "fail",
+        "aborted",
+        "blocked"
+      ]
+    },
+    "oracle": {
+      "type": "object",
+      "$comment": "which oracle produced the verdict — Test-Oracles doctrine 'every verdict names its oracle'. A pass/fail run-result whose oracle is absent is an INCOMPLETE artefact (the verdict is not yet substantiated); aborted/blocked need none, there is no verdict to justify. Optional in the schema for backward compat + so blocked runs stay valid; discipline-enforced for pass/fail.",
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "enum": [
+            "spec",
+            "golden-master",
+            "differential",
+            "invariant",
+            "metamorphic",
+            "consistency",
+            "llm-judge",
+            "human"
+          ],
+          "$comment": "the 8 from Test-Oracles, in strength order — use the strongest available"
+        },
+        "source": {
+          "type": "string",
+          "$comment": "where the oracle lives: spec section/URL, golden path, INV-N id, rubric path, the criterion cited (e.g. 'WCAG 2.2 §1.4.3')"
+        }
+      },
+      "additionalProperties": false
+    },
+    "stopCondition": {
+      "enum": [
+        "exit-criteria-met",
+        "time-box-exhausted",
+        "diminishing-returns",
+        "blocked",
+        null
+      ]
+    },
+    "bugs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^BUG-[0-9]{3,}$"
+      }
+    },
+    "results": {
+      "type": "array",
+      "$comment": "optional per-case outcomes — the source for consecutive-green counting (regression demotion evidence)",
+      "items": {
+        "type": "object",
+        "required": [
+          "caseId",
+          "verdict"
+        ],
+        "properties": {
+          "caseId": {
+            "type": "string",
+            "pattern": "^TC-[0-9]{3,}$"
+          },
+          "verdict": {
+            "enum": [
+              "pass",
+              "fail",
+              "skipped"
+            ]
+          },
+          "oracle": {
+            "type": "object",
+            "$comment": "per-case oracle — same doctrine at row granularity; a pass/fail case names how it was decided (skipped needs none)",
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "enum": [
+                  "spec",
+                  "golden-master",
+                  "differential",
+                  "invariant",
+                  "metamorphic",
+                  "consistency",
+                  "llm-judge",
+                  "human"
+                ]
+              },
+              "source": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "links": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "label",
+          "url"
+        ],
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "$comment": "the LINKS section: Runs tab, HTML report, Grafana URL, run Doc — every entry clickable"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

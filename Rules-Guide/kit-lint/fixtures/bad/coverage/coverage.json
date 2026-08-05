@@ -1,0 +1,40 @@
+{
+  "project": "ExampleApp",
+  "asOf": "2026-07-21",
+  "strategyRevision": "2026-07-20",
+  "units": [
+    {
+      "id": "S1",
+      "risk": 6,
+      "targetDepth": "standard",
+      "state": "covered",
+      "lastRun": "2026-07-21-signin",
+      "openBugs": []
+    },
+    {
+      "id": "E1",
+      "risk": 9,
+      "targetDepth": "deep",
+      "state": "partial",
+      "lastRun": "2026-07-21-orders",
+      "openBugs": [
+        "BUG-002"
+      ],
+      "reason": "thresholds crossed"
+    },
+    {
+      "id": "I1",
+      "risk": 4,
+      "targetDepth": "standard",
+      "state": "not-run",
+      "reason": "time-boxed out"
+    },
+    {
+      "id": "R1",
+      "risk": 3,
+      "targetDepth": "smoke",
+      "state": "blocked"
+    }
+  ],
+  "gaps": []
+}

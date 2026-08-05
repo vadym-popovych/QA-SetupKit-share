@@ -1,0 +1,39 @@
+{
+  "runId": "2026-07-13-regress-core",
+  "date": "2026-07-13",
+  "discipline": "regression",
+  "scenario": "core regression slice (P0 + bug-derived cases) against staging",
+  "env": "https://staging.example.com",
+  "method": "ci",
+  "planRef": "Test-Strategy/plans/2026-07-13-regress.md",
+  "verdict": "fail",
+  "oracle": {
+    "type": "invariant",
+    "source": "Test-Oracles/invariants.md#INV-2 (a locked slot never returns generated content)"
+  },
+  "stopCondition": "exit-criteria-met",
+  "bugs": [
+    "BUG-014"
+  ],
+  "results": [
+    {
+      "caseId": "TC-001",
+      "verdict": "pass",
+      "oracle": { "type": "spec", "source": "API contract: POST /slots returns 201 + slotId" }
+    },
+    {
+      "caseId": "TC-014",
+      "verdict": "fail",
+      "oracle": { "type": "invariant", "source": "INV-2" }
+    },
+    {
+      "caseId": "TC-020",
+      "verdict": "skipped"
+    }
+  ],
+  "links": [
+    { "label": "Runs tab", "url": "https://docs.google.com/spreadsheets/d/<id>#gid=<runs>" },
+    { "label": "HTML report", "url": "file:///…/results/2026-07-13-regress-core.html" }
+  ],
+  "notes": "TC-014 reproduced BUG-014; oracle is the INV-2 invariant, not a metric threshold. Skipped TC-020 was tag-filtered out of this slice (not run, not a pass)."
+}

@@ -1,0 +1,13 @@
+# Layer 2 · deep link / universal link routing: an external URL lands on the RIGHT screen,
+# including cold-start (app not already running) which is where routing most often breaks.
+# Maestro `openLink` drives the OS URL handler on both platforms.
+appId: ${APP_ID}
+---
+- stopApp                       # ensure COLD deep-link (app not resident) — the harder case
+- openLink: "https://example.com/product/42"   # TODO: a real universal/deep link for the app
+- assertVisible: "Product #42"  # TODO: routed straight to the target screen, not the home tab
+- takeScreenshot: deeplink-open
+# TODO: warm deep-link variant — app already running, link should still route:
+# - launchApp
+# - openLink: "myapp://product/42"
+# - assertVisible: "Product #42"

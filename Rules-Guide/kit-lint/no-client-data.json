@@ -1,0 +1,44 @@
+{
+  "_comment": "The kit SHIPS. Anything in it reaches every teammate who clones it — so nothing in it may name a real client, a real host, a real person, a real document id or a real ticket. Not in docs, not in tools, and above all not in EXAMPLES: an example file is the easiest place to leave somebody's data, because it looks like data ABOUT the format rather than somebody's data. (It happened: a shipped example held 309 of a client's real bugs, his staging URLs and 325 evidence links — committed and pushed, and nothing was looking.)",
+
+  "_how_to_use": "kit-lint L10 greps every tracked file against `deny`. A hit is a violation. Generic detection of 'a real name' is impossible, so the owner names his own clients ONCE, here. Add a client the day you start working with them — not the day you leak them. Teaching material keeps its full value without the names: the SHAPE of an example is what calibrates a judgement, never the product's nouns.",
+
+  "_scope": "THIS BINDS THE KIT ONLY — never a project document produced FROM the kit. The kit ships to other people, which is the entire reason a client's name may not sit in it. A deliverable for a client (checklist, test cases, bug summary, report, an export written into the client's own repo) is the opposite case: it holds that client's real data BY DESIGN — product and screen names, environments, defects, evidence links, carrier URLs — and replacing them with placeholders makes the document useless to the person it was written for. Do not 'apply L10' to project work. Three narrow things still stay out of a client-visible artifact, none of them anonymity: secrets (tokens, passwords), another client's data (shared QA infrastructure — publish only that client's view), and links the reader cannot open (fake traceability — say the carrier is internal and cite edition/round/asOf instead).",
+
+  "_placeholders": "Use these instead: hosts → example.com / *.invalid · projects → <Project> / \"the reference project\" · people → <name> or the ROLE (\"the backend dev\") · ids → <SHEET_ID>, <id> · emails → someone@example.com",
+
+  "_when_porting": "Porting a project artifact (tool / template / example / doc) INTO the kit? Anonymize it AS PART OF the port, BEFORE commit: strip every project value — client/app/scheme names, ids, hosts, machine paths (/Users/..., /tmp/<app>-src), real bug data — and read real values from env/config at run time instead. The kit copy must carry NO project data. Add any new product/app name to `deny` the SAME day (L10 only catches what is listed). This rule exists because recurring-driver.sh was generalized from a project's auto-resume.sh and config.example.json still shipped the app name 'snacksafe' — `deny` had the client 'SnackPro' but not its app name, so it slipped past L10.",
+
+  "_decisions": "Domain flavour in kit examples (Vadym, 28/07/2026) — KEEP. The Load-Testing run-log example names real-project metrics (`chapter1_ready_duration`, domain counters like unlocks/follow-ups). They identify no client, host or person, and a column list made of `metric_1`/`metric_2` stops teaching the thing it exists to teach: that the run log carries the BUSINESS end-to-end metric, not just k6 numbers. The anonymity rule binds names, not the shape of an example — see _how_to_use. Do not genericise these. || Manufacturing (28/07/2026) — it was a project handle for a CRM-platform (Creatio-style) locator pilot; the project has been deleted from the workspace. An external audit flagged that the kit treated the word as both a real name and a generic one, in 13 places including a shipped config whose `projectDir` pointed at `../../../Manufacturing/UI-Automation` — a path that no longer exists, so the example was broken as well as ambiguous. All 13 mentions are now generic ('a CRM-platform pilot'), and `projectDir` is a placeholder. The BARE WORD is deliberately NOT in `deny`: manufacturing is ordinary English, and a pattern matching it would red legitimate prose ('a manufacturing client') — a lint that cries wolf gets ignored exactly like a flaky gate, which is the failure this file warns about elsewhere. Only the handle form is denied, so a re-port cannot quietly bring the path back.",
+
+  "deny": [
+    { "pattern": "\\b(Seasonic|seasonicdev)\\b", "why": "client" },
+    { "pattern": "\\bYour ?[Ss]tory\\b", "why": "client" },
+    { "pattern": "\\bSnackPro\\b", "why": "client" },
+    { "pattern": "\\b[Ss]nack[Ss]afe\\b", "why": "client's app name (SnackPro)" },
+    { "pattern": "\\bBob[- ]Snail\\b", "why": "client" },
+    { "pattern": "\\bPrivacy[- ]?Snapp\\b", "why": "client (also its app name)" },
+    { "pattern": "\\b[Ii]torah\\b", "why": "client" },
+    { "pattern": "Manufacturing[-/](project|repository|UI-Automation)", "why": "a deleted project handle — the HANDLE form only, deliberately not the bare word (see _decisions)" },
+    { "pattern": "gitlab\\.triare\\.net", "why": "the owner's GitLab" },
+    { "pattern": "\\bTriare\\b", "why": "the owner's company" },
+    { "pattern": "\\bCRM ?Genesis\\b", "why": "client platform" },
+    { "pattern": "work\\.triare\\.net", "why": "the owner's tracker" },
+    { "pattern": "[a-z0-9-]*\\.fox\\.ck\\.ua", "why": "client staging hosts" },
+    { "pattern": "yourstory\\.club", "why": "client production host" },
+    { "pattern": "crmgenesis\\.com", "why": "client host" },
+    { "pattern": "amberharbor1919", "why": "the owner's Grafana stack" },
+    { "pattern": "qa-documents\\.pages\\.dev", "why": "the owner's report host" },
+    { "pattern": "\\b(Dmitrii Danilov|Anton Veryga)\\b", "why": "real people — use the ROLE" },
+    { "pattern": "\\b(Vadym Popovych|vadym[-_.]popovych|vadimpopovich)\\b", "why": "the owner — the kit is not about him. The separator is a CHARACTER CLASS on purpose: the dot-only pattern missed the GitHub-handle form vadym-popovych, which sat in a shipped tool's header and reached the public mirror (28/07/2026) — the same shape as the SnackPro/snacksafe hole in _when_porting" },
+    { "pattern": "[a-z0-9._%+-]+@(gmail\\.com|triare\\.net)", "why": "real email" },
+    { "pattern": "/(spreadsheets|document)/d/[A-Za-z0-9_-]{20,}", "why": "a real Google doc id" },
+    { "pattern": "\\b1[A-Za-z0-9_-]{43}\\b", "why": "BARE Google Drive file id (44 chars, leading 1) — the 05/08/2026 audit found the Demo doc id sitting URL-less in the roadmap, invisible to the /d/-prefixed pattern above" }
+  ],
+
+  "allow": [
+    { "file": "Rules-Guide/kit-lint/no-client-data.json", "why": "this file IS the denylist — it must contain the patterns" },
+    { "file": "Rules-Guide/kit-lint/kit-lint.mjs", "why": "the comment explaining L10 names what it was written to stop" },
+    { "file": "README.md", "match": "vadym-popovych", "why": "the Quick start clone URL IS the kit's distribution point — a teammate cannot clone the repo without the real owner/repo path. This is the one place the handle is load-bearing rather than incidental; everywhere else it is a leak (28/07/2026)" }
+  ]
+}

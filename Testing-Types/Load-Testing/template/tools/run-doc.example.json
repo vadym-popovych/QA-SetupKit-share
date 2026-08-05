@@ -1,0 +1,59 @@
+{
+  "$comment": "Project-supplied narrative for write-run-doc.mjs. Copy, fill with THIS run's real numbers, then: PROJECT_NAME=<Project> RUN_DOC_CONTENT=./run-doc.json node tools/write-run-doc.mjs. Nothing here is baked into the kit tool.",
+  "runId": "2026-01-15-baseline",
+  "date": "2026-01-15",
+  "titleSuffix": "Load Test Report",
+  "subtitle": [
+    "Run ID: 2026-01-15-baseline  ·  Date: 2026-01-15  ·  Env: staging.example.com",
+    "Scenario: browse → search → checkout  ·  Method: local k6  ·  VUs: 50"
+  ],
+  "sections": [
+    {
+      "heading": "1. Purpose",
+      "paragraphs": [
+        "Establish a baseline for the checkout flow at 50 concurrent users before the release load test."
+      ]
+    },
+    {
+      "heading": "2. Run configuration",
+      "metrics": [
+        ["Virtual users", "50"],
+        ["Wall-clock", "10m 00s"],
+        ["Iterations", "1 000 complete, 0 interrupted"],
+        ["HTTP requests", "24 500 total (40.8 req/s)"]
+      ]
+    },
+    {
+      "heading": "3. Key metrics",
+      "metrics": [
+        ["http_req_failed", "0.04% (10 / 24500)"],
+        ["http_req_duration", "med 120 ms · p95 380 ms · max 2.10 s"],
+        ["checkout latency", "med 220 ms · p95 640 ms"]
+      ]
+    },
+    {
+      "heading": "4. Findings",
+      "paragraphs": [
+        "No threshold crossed. p95 checkout latency (640 ms) is within the 800 ms budget.",
+        "One transient 5xx burst at ramp-up (10 requests) — classify with a targeted repro if it recurs."
+      ],
+      "metrics": [
+        ["Verdict", "pass (baseline recorded)"]
+      ]
+    },
+    {
+      "heading": "5. Artifacts & links",
+      "paragraphs": [
+        "Local (results/): 2026-01-15-baseline.log · summary.json · run.html",
+        "Runs tab / HTML report / Grafana dashboard — add the clickable links here."
+      ]
+    },
+    {
+      "heading": "6. Next steps",
+      "paragraphs": [
+        "1) Ramp to the release target (200 VUs) against staging.",
+        "2) Add a threshold on p95 checkout latency at 800 ms."
+      ]
+    }
+  ]
+}

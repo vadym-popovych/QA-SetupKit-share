@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "google-sheets": {
+      "command": "node",
+      "args": ["/ABSOLUTE/PATH/TO/QA-SetupKit/MCP-configurations/mcp-sheets/server.mjs"],
+      "env": {}
+    },
+    "figma-dev-mode-mcp-server": {
+      "type": "sse",
+      "url": "http://127.0.0.1:3845/sse"
+    },
+    "postman": {
+      "type": "http",
+      "url": "https://mcp.postman.com/mcp"
+    }
+  }
+}

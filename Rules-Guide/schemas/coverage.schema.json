@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "qa-setupkit/coverage.schema.json",
+  "title": "Coverage snapshot vs strategy scope",
+  "type": "object",
+  "required": [
+    "project",
+    "asOf",
+    "strategyRevision",
+    "units"
+  ],
+  "properties": {
+    "project": {
+      "type": "string"
+    },
+    "asOf": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}"
+    },
+    "strategyRevision": {
+      "type": "string",
+      "$comment": "which STRATEGY.md revision this snapshot measures against"
+    },
+    "units": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "risk",
+          "targetDepth",
+          "state"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "$comment": "strategy scope-unit id (S1/E1/R1/I1)"
+          },
+          "risk": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9
+          },
+          "targetDepth": {
+            "enum": [
+              "deep",
+              "standard",
+              "smoke"
+            ]
+          },
+          "state": {
+            "enum": [
+              "covered",
+              "partial",
+              "not-run",
+              "blocked"
+            ],
+            "$comment": "covered = executed at target depth this cycle + latest verdict pass + no open bugs; partial = below target depth OR latest run failed OR passed-with-open-bugs; not-run = no run this cycle (recorded skip, reason required); blocked = attempted, stopped by env/accounts (reason required). Same definitions as Traceability/TRACEABILITY_RULES.md"
+          },
+          "lastRun": {
+            "type": "string",
+            "$comment": "runId that last touched this unit"
+          },
+          "openBugs": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^BUG-[0-9]{3,}$"
+            }
+          },
+          "reason": {
+            "type": "string",
+            "$comment": "REQUIRED in spirit for not-run/blocked — skips are never silent"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "gaps": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "$comment": "unit ids with risk >= 7 not at 'covered' — the escalation list"
+    }
+  },
+  "additionalProperties": false
+}

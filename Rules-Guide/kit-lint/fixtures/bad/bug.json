@@ -1,0 +1,29 @@
+{
+  "id": "BUG-003",
+  "date": "2026-07-08",
+  "severity": "Medium",
+  "severityBranch": "tree #3: feature works but noticeable quality degradation at scale (~24% of outputs affected)",
+  "priority": "P2",
+  "priorityProposed": true,
+  "component": "chapter cover generation (chapter.chapterCoverUrl)",
+  "summary": "Under concurrent generation load, a share of chapters never receive a cover image",
+  "repro": [
+    "clean state: staging build 2026-07-08 (commit abc123); account pool user01..user20, all 4 book slots free on each",
+    "run 20 concurrent real generations to completion",
+    "after all books reach status:completed, wait a 10-min settle (rules out lag)",
+    "GET /books/:id/chapters for every book; count chapters with empty chapterCoverUrl"
+  ],
+  "expected": "every generated chapter has a non-empty chapterCoverUrl",
+  "actual": "~24% of chapters have empty chapterCoverUrl (measured after full completion + settle)",
+  "evidence": [
+    "results/2026-07-08-run.log (local run artefact, per Project-Configuration filing)",
+    "https://docs.google.com/spreadsheets/d/<sheet-id>/edit#gid=<covers-gid> — Covers tab, per-account breakdown"
+  ],
+  "tags": [
+    "CONTENT"
+  ],
+  "invariantViolated": "INV-1",
+  "status": "open",
+  "invariantViolatd": "INV-1",
+  "garbage_field": "nope"
+}

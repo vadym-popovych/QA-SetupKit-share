@@ -1,0 +1,69 @@
+{
+  "$comment": "A SYNTHETIC example — it pairs with ../../Bug-Summary/template/bug-summary.example.json (same invented project), so a teammate can run tr-doc.mjs end to end before touching real data: this file is the narrative half, that file is the numbers half. Every device, site and module here is invented. NEVER put a client's engagement facts in the kit: the kit ships.",
+
+  "reportId": "TR-2026-07-15-acme",
+  "project": "Acme Shop (example)",
+  "date": "15/07/2026",
+  "preparedBy": "<QA engineer>",
+
+  "objective": {
+    "intro": "To test all tasks planned for the Sprint and validate that the application correctly supports main business flows and processes such as:"
+  },
+
+  "environment": {
+    "groups": [
+      {
+        "name": "Android",
+        "items": [
+          "Pixel 8, Android 15 (412x915)",
+          "Galaxy Tab S9, Android 14 (800x1280)"
+        ]
+      },
+      {
+        "name": "iOS",
+        "items": [
+          "iPhone SE (3rd gen), iOS 17.5 (375x667)",
+          "iPhone 15 Pro, iOS 18.1 (393x852)"
+        ]
+      },
+      {
+        "name": "Web (Mac OS)",
+        "items": [
+          "Chrome, latest version",
+          "Firefox, latest version",
+          "Safari, latest version"
+        ]
+      }
+    ],
+    "note": "Web related testing was performed on viewports from 1024px to 2560px wide."
+  },
+
+  "tools": [
+    "Dev Tools",
+    "Bug Tracking Tool"
+  ],
+
+  "testDesign": [
+    { "type": "smoke" },
+    { "type": "functional" },
+    { "type": "ui" },
+    { "type": "regression" },
+    {
+      "type": "custom",
+      "name": "Payment Sandbox Testing",
+      "goal": "Verify every payment flow against the provider's sandbox before any real card is involved.",
+      "process": [
+        "Execute each payment method with the provider's test cards, covering approved, declined and 3-D Secure paths;",
+        "Verify the order state after every outcome, including abandoned and timed-out sessions."
+      ],
+      "completion": [
+        "All planned payment paths have been executed;",
+        "Every mismatch between charge and order state has been reported."
+      ]
+    }
+  ],
+
+  "alsoPerformed": [
+    "Unit testing (provided by the developer)"
+  ]
+}

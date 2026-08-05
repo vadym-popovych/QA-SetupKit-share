@@ -1,0 +1,121 @@
+{
+  "$comment": "DEMONSTRATES the four result states of a PageSpeed round and why each exists. 'home' desktop = 'measured': 3 runs (89/91/93), the cell carries the MEDIAN 91 and the median run's LAB metrics + CrUX FIELD data, plus an `evidence` block whose `runScore` (91) is the score INSIDE the linked report — psi-sheet.mjs refuses to publish when it disagrees with `score`, so runScore is REQUIRED. 'home' mobile = 'measured' with score 41 — below 50, so a comment is MANDATORY, and the comment names WHAT is slow (the score never explains itself). 'pricing' desktop = 'not-run': only 1 of the 3 target runs succeeded, so there is NO score and the cell stays EMPTY — a 1-run number would be noise dressed as a fact, and 0 would be a lie. 'pricing' mobile = 'error': every attempt failed, the failure text is kept as evidence. 'legacy-portal' desktop = 'n-a': the page does not exist on that platform in this round — comment mandatory, and again NOT 0. The `budgets` block is what turns numbers into a verdict: it exists ONLY because a named owner approved it on a named date. Without it, this report REPORTS and never JUDGES.",
+  "round": {
+    "id": "r6",
+    "date": "2026-06-05",
+    "env": "production",
+    "label": "Points from 05/06/2026 (Prod)"
+  },
+  "source": {
+    "tool": "psi-api",
+    "lighthouseVersion": "11.0.0",
+    "runsPerPage": 3,
+    "strategyProfiles": ["desktop", "mobile"],
+    "collectedAt": "2026-06-05T09:12:44Z"
+  },
+  "budgets": {
+    "performance": 70,
+    "lcpMs": 2500,
+    "tbtMs": 300,
+    "cls": 0.1,
+    "inpMs": 200,
+    "approvedBy": "product owner (name)",
+    "approvedOn": "2026-05-20"
+  },
+  "pages": [
+    {
+      "id": "home",
+      "name": "Home",
+      "url": "https://www.example.com/",
+      "section": "Marketing Pages",
+      "results": [
+        {
+          "platform": "desktop",
+          "status": "measured",
+          "score": 91,
+          "runs": [89, 91, 93],
+          "metrics": {
+            "lcpMs": 1420,
+            "tbtMs": 60,
+            "cls": 0.01,
+            "fcpMs": 820,
+            "speedIndexMs": 1650
+          },
+          "field": {
+            "lcpMs": 1900,
+            "inpMs": 120,
+            "cls": 0.02,
+            "source": "crux-url"
+          },
+          "collectedAt": "2026-06-05T09:13:10Z",
+          "evidence": {
+            "runScore": 91,
+            "capturedAt": "2026-06-05T09:20:00Z",
+            "reportUrl": "https://example-evidence.invalid/reports/home-desktop-91.html",
+            "screenshotUrl": "https://example-evidence.invalid/reports/home-desktop-91.png"
+          }
+        },
+        {
+          "platform": "mobile",
+          "status": "measured",
+          "score": 41,
+          "runs": [38, 41, 47],
+          "metrics": {
+            "lcpMs": 6100,
+            "tbtMs": 940,
+            "cls": 0.24,
+            "fcpMs": 2600,
+            "speedIndexMs": 7300
+          },
+          "field": {
+            "lcpMs": 4400,
+            "inpMs": 310,
+            "cls": 0.19,
+            "source": "crux-origin"
+          },
+          "comment": "Score < 50 → comment mandatory. Hero image is a 1.8 MB unoptimised PNG served at full size to 390px viewports (LCP 6.1 s) and the marketing tag bundle blocks the main thread (TBT 940 ms). Spread 38-47 across 3 runs = unstable, not a clean number. Field data is CrUX ORIGIN fallback, so it describes the site, not this page. Bug CANDIDATE (tag PERF) — reproduce in a second round before filing.",
+          "collectedAt": "2026-06-05T09:14:02Z"
+        }
+      ]
+    },
+    {
+      "id": "pricing",
+      "name": "Pricing",
+      "url": "https://www.example.com/pricing",
+      "section": "Marketing Pages",
+      "results": [
+        {
+          "platform": "desktop",
+          "status": "not-run",
+          "runs": [84],
+          "comment": "Only 1 of the 3 target runs succeeded (2 x HTTP 429 from the PSI quota). One load is noise, so there is NO score and the cell stays EMPTY this round — an 84 taken from a single run would be a number nobody can stand behind. Re-collect.",
+          "error": "HTTP 429 — Quota exceeded for quota metric 'Queries' (attempts 2 and 3)"
+        },
+        {
+          "platform": "mobile",
+          "status": "error",
+          "comment": "Every attempt failed → the tool could not measure this page. Not a 0, not an empty pass: the round is incomplete until this is re-collected.",
+          "error": "lighthouseResult.runtimeError: ERRORED_DOCUMENT_REQUEST — the page returned HTTP 503"
+        }
+      ]
+    },
+    {
+      "id": "legacy-portal",
+      "name": "Legacy portal",
+      "url": "https://legacy.example.com/portal",
+      "section": "Internal Pages",
+      "results": [
+        {
+          "platform": "desktop",
+          "status": "n-a",
+          "comment": "n/a — the legacy portal is desktop-only in name but was retired from the desktop nav in this release; it is not part of this round's scope. Comment mandatory so that an empty cell is never read as 'nobody bothered'."
+        },
+        {
+          "platform": "mobile",
+          "status": "n-a",
+          "comment": "n/a — no mobile build of this page exists. It cannot score, and it must never be recorded as 0."
+        }
+      ]
+    }
+  ]
+}

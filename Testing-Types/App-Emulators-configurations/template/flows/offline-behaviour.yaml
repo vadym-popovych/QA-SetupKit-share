@@ -1,0 +1,18 @@
+# Layer 2 · network profile: offline behaviour — the app shows a real offline state
+# (banner / cached content / retry), not a spinner forever or a raw error.
+# ⚠️ Platform caveat: `setAirplaneMode` is ANDROID-ONLY in Maestro. On iOS the simulator
+#    can't toggle radios from a flow — drive iOS offline from the runner instead
+#    (`xcrun simctl status_bar … --dataNetwork` is cosmetic; use a Network Link Conditioner
+#    profile or a proxy). Keep this flow for Android; mark the iOS offline row not-run on
+#    iOS unless the runner set up a real offline condition. Never fake the Pass.
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- setAirplaneMode: enabled       # Android only — go offline
+- tapOn: "Refresh"               # TODO: an action that needs the network
+- assertVisible: "You're offline" # TODO: a real offline affordance, not an infinite spinner
+- takeScreenshot: offline-behaviour
+- setAirplaneMode: disabled       # ALWAYS restore — a left-offline emulator poisons later flows
+- tapOn: "Refresh"
+- assertVisible: "Updated"        # TODO: recovers when back online

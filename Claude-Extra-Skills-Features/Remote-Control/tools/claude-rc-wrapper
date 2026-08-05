@@ -1,0 +1,26 @@
+#!/bin/sh
+# Extensionless launcher for claude-rc-wrapper.mjs — THIS is the path the IDE setting
+# `claudeCode.claudeProcessWrapper` must point at. Pointing it at the .mjs breaks the panel.
+#
+# WHY: the Agent SDK decides how to spawn `pathToClaudeCodeExecutable` from its file
+# EXTENSION alone:
+#   isNative = !['.js','.mjs','.tsx','.ts','.jsx'].some(ext => p.endsWith(ext))
+#   command  = isNative ? p    : runtime            // "node" / "bun"
+#   args     = isNative ? [...executableArgs, ...cliArgs]
+#                       : [...executableArgs, p, ...cliArgs]
+# With a process wrapper configured, `executableArgs` is `[the real claude binary]`. So a
+# wrapper path ending in .mjs produces `node <native claude binary> <wrapper.mjs> …` — node
+# is handed a compiled binary as its entry point and the session dies before it starts, with
+#   SyntaxError: Invalid or unexpected token   at …/native-binary/claude:1
+# An extensionless path is classified as a native binary and spawned as
+#   <wrapper> <real claude binary> <cli args…>
+# which is the contract claude-rc-wrapper.mjs expects (argv[2] = the real binary). Hence this
+# two-file shape: an extensionless shim that execs the ESM proxy.
+#
+# `exec` matters: the shim must not survive as a second process, so signals and the exit code
+# belong to the proxy and the PID in the log is the one the IDE is talking to.
+#
+# CLAUDE_RC_NODE overrides the interpreter (a machine whose `node` is not on the IDE's PATH,
+# or one that needs a specific version — the CLI requires Node >= 22).
+NODE="${CLAUDE_RC_NODE:-$(command -v node || echo /usr/local/bin/node)}"
+exec "$NODE" "$(dirname "$0")/claude-rc-wrapper.mjs" "$@"

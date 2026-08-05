@@ -1,0 +1,144 @@
+{
+  "_comment": "The kit has THREE classes of module, and until 12/07/2026 it named none of them — which let kit-lint form-check 19 of 26 modules and still print 'clean'. That is a silent cap: exactly what CI_RULES forbids in the systems this kit tests. Declared here so the lint can enforce the RIGHT contract per class and PRINT its scope.",
+
+  "classes": {
+    "kit": {
+      "contract": ["README.md", "SETUP.md", "*_RULES.md", "CLAUDE.starter.md"],
+      "meaning": "A testing discipline or planning layer. Full contract: it must be learnable, runnable, rule-bound, and pasteable into a teammate's CLAUDE.md."
+    },
+    "feature": {
+      "contract": ["README.md"],
+      "meaning": "A harness add-on for the agent itself (session limits, cron, loops, methods). It has no testing discipline of its own, so RULES/starter are OPTIONAL — but a README that explains what it is and how to run it is not."
+    },
+    "group": {
+      "contract": ["README.md"],
+      "meaning": "A group index: it owes an index README and nothing else — the modules INSIDE it owe the full kit contract. A group is declared in `groups` (so its children are discovered and held to their class) AND in `overrides` (so the index folder itself, discovered as a child of its parent group, is not held to a contract it was never meant to meet)."
+    }
+  },
+
+  "groups": {
+    "Testing-Types": "kit",
+    "Testing-Planning": "kit",
+    "QA-Documentation": "kit",
+    "QA-Documentation/Custom-Reports": "kit",
+    "Claude-Extra-Skills-Features": "feature",
+    "Rules-Guide": "feature",
+    "MCP-configurations": "feature"
+  },
+
+  "overrides": {
+    "Claude-Extra-Skills-Features/Loop-Engineering": "kit",
+    "Claude-Extra-Skills-Features/Memory-Eval": "kit",
+    "QA-Documentation/Checklist": "kit",
+    "QA-Documentation/Custom-Reports": "group"
+  },
+
+  "_note_on_maturity": "The maturity BADGE is single-sourced here (28/07/2026) because it diverged in the wild: the root README badged Bug-Summary battle-tested while its own group index badged it stable, and the two disagreed for weeks with nothing to notice. L11 now checks every badge in every README against this map, so a badge can only change in one place. `evidence` is MANDATORY for battle-tested and names what the kit was actually driven through — a green badge whose evidence nobody can state is the over-claim the badge system exists to prevent. Promotion is an OWNER decision, never a lint fix: if a kit looks under-badged, ask, do not edit.",
+
+  "maturity": {
+    "QA-Documentation": {
+      "badge": "battle-tested",
+      "evidence": "two client engagements, 2026 — mobile and web checklists, several rounds each, generated from Figma into Sheets"
+    },
+    "QA-Documentation/Custom-Reports/HTML-Reports": {
+      "badge": "battle-tested",
+      "evidence": "the publisher behind the real load-run reports handed to a team; private-by-default links, host set up end to end"
+    },
+    "QA-Documentation/Custom-Reports/PageSpeed-report": {
+      "badge": "stable"
+    },
+    "QA-Documentation/Custom-Reports/Bug-Summary": {
+      "badge": "stable",
+      "note": "Owner decision 28/07/2026: stays `stable`, not battle-tested — the module grouping in the roll-up is not settled yet. Do not promote without Vadym."
+    },
+    "QA-Documentation/Custom-Reports/Test-Report": {
+      "badge": "stable"
+    },
+    "Testing-Types/App-Emulators-configurations": {
+      "badge": "battle-tested",
+      "evidence": "two mobile apps driven on iOS + Android simulators against real builds; its rules were rewritten from field failures (a Maestro crash reading as a false PASS)"
+    },
+    "Testing-Types/Web-Testing": {
+      "badge": "battle-tested",
+      "evidence": "a landing round across the kit's 9 viewport widths that produced BUG-008"
+    },
+    "Testing-Types/Load-Testing": {
+      "badge": "battle-tested",
+      "evidence": "a k6 harness driven across many runs, smoke through stress, against a live LLM-backed API — the account-pool and cost rules come from those runs"
+    },
+    "Testing-Types/API-Testing": {
+      "badge": "stable"
+    },
+    "Testing-Types/UI-Automation": {
+      "badge": "battle-tested",
+      "evidence": "a CRM locator set captured from a real test stand (the E2E-suite layer on top is itself stable, not battle-tested)"
+    },
+    "Testing-Types/Security-Testing": {
+      "badge": "stable"
+    },
+    "Testing-Planning/Test-Data": {
+      "badge": "stable"
+    },
+    "Testing-Planning/Test-Strategy-and-Planning": {
+      "badge": "stable"
+    },
+    "Testing-Planning/Test-Oracles": {
+      "badge": "battle-tested",
+      "evidence": "project invariants plus calibrated LLM-judge rubrics, used to decide real verdicts"
+    },
+    "Rules-Guide/schemas": {
+      "badge": "stable"
+    },
+    "Testing-Planning/Traceability": {
+      "badge": "stable"
+    },
+    "Testing-Planning/QA-Agent-Playbooks": {
+      "badge": "stable"
+    },
+    "Testing-Planning/CI-Integration": {
+      "badge": "stable"
+    },
+    "Testing-Types/Accessibility-Testing": {
+      "badge": "stable"
+    },
+    "Testing-Types/Visual-Regression-Testing": {
+      "badge": "stable"
+    },
+    "Testing-Planning/Reporting-and-Metrics": {
+      "badge": "stable"
+    },
+    "Testing-Types/Exploratory-Testing": {
+      "badge": "stable"
+    },
+    "Testing-Types/Regression-Testing": {
+      "badge": "stable"
+    },
+    "Testing-Types/Localization-Testing": {
+      "badge": "stable"
+    },
+    "Testing-Types/Compatibility-Testing": {
+      "badge": "stable"
+    },
+    "Rules-Guide/glossary": {
+      "badge": "stable"
+    },
+    "MCP-configurations": {
+      "badge": "stable"
+    },
+    "Claude-Extra-Skills-Features": {
+      "badge": "stable"
+    },
+    "Rules-Guide/kit-lint": {
+      "badge": "battle-tested",
+      "evidence": "66 real violations on its first run against this kit; five checkers now proven to red on bad input"
+    },
+    "Claude-Extra-Skills-Features/Loop-Engineering": {
+      "badge": "stable"
+    },
+    "Rules-Guide/Project-Configuration": {
+      "badge": "stable"
+    }
+  },
+
+  "_note_on_overrides": "Loop-Engineering carries real discipline (repair vs observation loops, allowlist guard, never-fake-a-Pass in loops) and ships RULES + starter — so it is held to the kit contract despite living among the features. If a feature grows rules, move it up here rather than lowering the bar. Memory-Eval (17/07/2026) is the second such case: it ships MEMORY_EVAL_RULES + starter and carries a real discipline (falsifiable oracles, pinned run conditions, a red is a question not a verdict), so it is held to the kit contract too. Custom-Reports (13/07/2026) is a NESTED group inside QA-Documentation: without its `groups` entry the module discovery — which walks exactly one level under each group — would never see HTML-Reports or PageSpeed-report, and two kits would go UNCHECKED while the lint printed 'clean'. That is the same silent cap this file was written to kill, so a nested group must always be declared in both places. Rules-Guide and MCP-configurations were registered 28/07/2026 after an external audit found the ENTIRE reference layer outside the manifest — the exact silent scope-cap this file exists to kill, hiding in the file's own folder: Roadmap/ shipped with no README and nothing noticed, while schemas/ is sold as a direction in the root README yet escaped every shape check. Both are `feature`-class deliberately: their children are reference and integration layers consumed through another kit's flow (validate.mjs, a `.mcp.json` path), not disciplines with a round to run, so a README that explains what the thing is and how to reach it IS the whole contract — inventing SETUP/RULES/starter files for them to satisfy a linter would be the cargo-cult version of this check. A child that grows a real discipline gets raised in `overrides`, the same way Loop-Engineering and Memory-Eval were."
+}

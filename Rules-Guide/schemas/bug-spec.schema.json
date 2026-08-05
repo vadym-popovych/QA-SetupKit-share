@@ -1,0 +1,112 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://qa-setupkit/schemas/bug-spec.schema.json",
+  "title": "Bug spec — ONE developer-facing spec, two renderers (board ticket + Sheet row)",
+  "description": "The input of QA-Documentation/Bug-Reports/template/tools: redmine-bug.mjs renders it into the team's Textile board ticket, and bug-row.mjs renders THE SAME file into the v2 one-cell Sheet row (Bug Reports tab or, with --candidates, the Bug candidates funnel). One spec, both outputs — no second source of truth. This is deliberately NOT bug.schema.json: the QA RECORD carries the internal taxonomy (severity, P0–P3, invariants, tags); the spec carries only what a developer needs to reproduce, written in the language of their tool (REDMINE_WORKFLOW §Perspective by layer). Instances live at <Project>/QA-Documentation/bugs/BUG-NNN.redmine.json.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["subject", "actual", "expected"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^BUG-[0-9]{3,}$",
+      "description": "The QA record id. Optional for the board (the ticket gets a Redmine number), load-bearing for the Sheet: bug-row.mjs upserts by '<id> — <subject>' in column A, so a renamed id creates a duplicate row instead of updating one."
+    },
+    "subject": {
+      "type": "string",
+      "minLength": 1,
+      "description": "WITHOUT any [BUG-…] prefix — the renderer derives the prefix from `layer`. Then '<what> <where>'; the build suffix comes from `build`, never typed here."
+    },
+    "layer": {
+      "enum": ["App", "BE", "FE"],
+      "description": "Defect layer → subject prefix: App → [BUG-App], BE → [BUG-BE], FE → [BUG-FE]; absent → plain [BUG]. Also dictates the WORDING perspective (user journey vs exact API calls) — REDMINE_WORKFLOW §Perspective by layer."
+    },
+    "build": {
+      "type": "string",
+      "description": "Build number when the team's build numbering applies — renders as the subject suffix '(Directly on the <build> build)'."
+    },
+    "priority": {
+      "enum": ["Low", "Normal", "High", "Urgent", "Immediately"],
+      "description": "The REDMINE priority scale (default Normal), not the QA record's P0–P3 — the two scales answer different questions and are never mixed."
+    },
+    "preconditions": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "USER perspective for App/FE (install build + log in), API perspective for BE (environment + auth + entity ids)."
+    },
+    "steps": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Numbered by the renderers. UI journey for App/FE; the exact METHOD /endpoint calls for BE."
+    },
+    "actual": {
+      "type": "string",
+      "minLength": 1,
+      "description": "SHORT and precise — one fact. What the user SEES (App/FE) or what the RESPONSE holds (BE)."
+    },
+    "expected": {
+      "type": "string",
+      "minLength": 1
+    },
+    "screenshots": {
+      "type": "array",
+      "description": "Evidence LINKS (file-host, e.g. Mega) — never local paths (those go in `attachments`). A bare string renders with the generic 'Screenshot:' label; a {label, url} pair renders the label as its own bold paragraph (board) / as the link text itself (Sheet). A placeholder url (`<Mega link …>`) renders as a bold label, never a broken link.",
+      "items": {
+        "type": ["string", "object"],
+        "additionalProperties": false,
+        "required": ["label", "url"],
+        "properties": {
+          "label": { "type": "string", "minLength": 1 },
+          "url": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "notes": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Free facts for the assignee (debug ids, scope observations, dev suggestions). NO internal cross-references into the QA Sheet."
+    },
+    "comments": {
+      "type": "string",
+      "description": "Sheet-only (bug-row.mjs column C) — free info for the QA tab; never enters the board ticket."
+    },
+    "attachments": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "LOCAL file paths uploaded INTO the Redmine issue (redmine-bug.mjs only). Links belong in `screenshots`."
+    },
+    "assignee": {
+      "type": ["string", "number"],
+      "description": "Member name or numeric id — resolved against the board's membership; re-ask the responsibility roles per project."
+    },
+    "sprint": {
+      "type": ["string", "number"],
+      "description": "\"active\" is the standard — the tool resolves the currently ACTIVE sprint LIVE at creation time; a name or id pins one explicitly. No active sprint on the board → the tool errors out, never guesses."
+    },
+    "status": {
+      "enum": ["Backlog", "To do", "Analysis", "In progress", "Reopened", "To test", "QA in progress", "PM Acceptance", "Deployed", "QA in Progress", "Reopen", "Fixed"],
+      "description": "Omit = 'To do' in both renderers ('Backlog' only for very minor bugs, set explicitly). The first nine are the BOARD workflow (redmine-bug.mjs); 'QA in Progress'/'Reopen'/'Fixed' exist only in the Sheet tab's column-D lifecycle (bug-row.mjs) and the board tool refuses them."
+    },
+    "verdict": {
+      "enum": ["Proposed", "Approved", "Rejected"],
+      "description": "Candidates funnel only (bug-row.mjs --candidates, column D; default Proposed). Ignored by the board tool — a candidate is not on the board yet by definition."
+    },
+    "severityBranch": {
+      "type": "string",
+      "description": "Which severity-decision-tree branch fired. QA-internal: bug-row.mjs renders it as a cell NOTE on the Summary cell; it NEVER enters the ticket body (severity does not exist on the board)."
+    },
+    "custom_fields": {
+      "type": "array",
+      "description": "Redmine passthrough, sent as-is with the issue (board tool only).",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "value"],
+        "properties": {
+          "id": { "type": "integer", "minimum": 1 },
+          "value": true
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,12 @@
+# Real config holds target host + account passwords — never commit it.
+config.json
+
+# Scan reports and any captured evidence
+results/
+scans/
+*.har
+
+# findings before triage may contain sensitive detail
+findings.md
+
+node_modules/

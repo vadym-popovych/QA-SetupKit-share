@@ -1,0 +1,17 @@
+{
+  "_comment": "Copy to <Project>/UI-Automation/e2e/package.json (drop this key). The CI-Integration kit's NODE_DIR must point at the folder holding THIS file and its lockfile — `npm ci` needs one, and a pipeline that cannot install its deps is a BLOCKED gate, not a green one.",
+  "name": "<project>-e2e",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "test:gate": "playwright test --grep @high",
+    "test:regression": "playwright test --grep @regression",
+    "lint": "node tools/lint-specs.mjs tests",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.47.0",
+    "typescript": "^5.5.0"
+  }
+}

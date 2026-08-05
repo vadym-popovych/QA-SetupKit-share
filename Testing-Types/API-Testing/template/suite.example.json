@@ -1,0 +1,94 @@
+{
+  "$comment": "Copy to <Project>/API-Testing/suite.json, then REPLACE every check with checks derived from the REAL Postman collection / spec (SETUP.md §1) — this file documents the FORMAT against an imaginary notes API on an example host. Placeholders in any string: {env.NAME} = environment variable (secrets never appear as literals), {cap.name} = a value captured by an earlier check (chain through returned values, never hardcoded ids), {runId} = this run's id (test data is run-id-prefixed per TEST_DATA_RULES). A `capture` path is an implicit exists-assertion: if the response lacks it, the check FAILS. Checks run in order; a check whose {cap.*} source did not pass is skipped, and any skipped/errored check makes the run blocked — never a pass. Keep ids as the project's real TC-NNN where cases exist: those rows feed results[] in the run-result. Every check names its oracle.",
+  "suite": "notes CRUD + auth (format example)",
+  "oracle": { "type": "spec", "source": "the Postman collection / OpenAPI spec the checks were derived from" },
+  "checks": [
+    {
+      "id": "TC-001",
+      "name": "no token on a write → 401 with an error body (negative first: a suite with only happy paths tests the demo, not the API)",
+      "request": {
+        "method": "POST",
+        "path": "/notes",
+        "headers": { "Content-Type": "application/json" },
+        "body": { "title": "{runId} unauthenticated attempt" }
+      },
+      "expect": { "status": 401, "body": [ { "path": "error", "exists": true } ] },
+      "oracle": { "type": "spec", "source": "auth section of the spec — every write requires a bearer token" }
+    },
+    {
+      "id": "TC-002",
+      "name": "create note → 201, body echoes what was sent (200 OK alone is not an oracle)",
+      "request": {
+        "method": "POST",
+        "path": "/notes",
+        "headers": { "Authorization": "Bearer {env.API_TOKEN}", "Content-Type": "application/json" },
+        "body": { "title": "{runId} smoke note", "content": "created by api-run.mjs" }
+      },
+      "expect": {
+        "status": 201,
+        "body": [
+          { "path": "id", "exists": true },
+          { "path": "title", "equals": "{runId} smoke note" }
+        ]
+      },
+      "capture": { "noteId": "id" },
+      "oracle": { "type": "spec", "source": "POST /notes in the collection — 201 + the created resource in the body" }
+    },
+    {
+      "id": "TC-003",
+      "name": "created note is readable, chained via the returned id",
+      "request": {
+        "method": "GET",
+        "path": "/notes/{cap.noteId}",
+        "headers": { "Authorization": "Bearer {env.API_TOKEN}" }
+      },
+      "expect": { "status": 200, "body": [ { "path": "title", "equals": "{runId} smoke note" } ] },
+      "oracle": { "type": "invariant", "source": "a created resource is readable (API_TESTING_RULES)" }
+    },
+    {
+      "id": "TC-004",
+      "name": "another user's token on my note → 404 (a 200 here is an IDOR — file it with tag SECURITY)",
+      "request": {
+        "method": "GET",
+        "path": "/notes/{cap.noteId}",
+        "headers": { "Authorization": "Bearer {env.API_TOKEN_SECOND_USER}" }
+      },
+      "expect": { "status": 404 },
+      "oracle": { "type": "spec", "source": "authorization model — resources are per-user; 403 or 404 per the spec, 200 never" }
+    },
+    {
+      "id": "TC-005",
+      "name": "bad input → documented 422 + a useful error body, not a 500",
+      "request": {
+        "method": "POST",
+        "path": "/notes",
+        "headers": { "Authorization": "Bearer {env.API_TOKEN}", "Content-Type": "application/json" },
+        "body": { "content": "no title field" }
+      },
+      "expect": { "status": 422, "body": [ { "path": "error", "matches": "title" } ] },
+      "oracle": { "type": "spec", "source": "validation rules in the spec — title is required" }
+    },
+    {
+      "id": "TC-006",
+      "name": "delete → 204 (doubles as teardown — the suite cleans up what it created)",
+      "request": {
+        "method": "DELETE",
+        "path": "/notes/{cap.noteId}",
+        "headers": { "Authorization": "Bearer {env.API_TOKEN}" }
+      },
+      "expect": { "status": 204 },
+      "oracle": { "type": "spec", "source": "DELETE /notes/:id in the collection" }
+    },
+    {
+      "id": "TC-007",
+      "name": "deleted note 404s on read-back",
+      "request": {
+        "method": "GET",
+        "path": "/notes/{cap.noteId}",
+        "headers": { "Authorization": "Bearer {env.API_TOKEN}" }
+      },
+      "expect": { "status": 404 },
+      "oracle": { "type": "invariant", "source": "a deleted resource 404s (API_TESTING_RULES)" }
+    }
+  ]
+}

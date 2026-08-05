@@ -1,0 +1,21 @@
+{
+  "platform": "ios",
+  "scheme": "Demo",
+  "bundleId": "com.example.app",
+  "appId": "com.example.app",
+  "simulator": "iPhone 16 Pro",
+  "buildDir": "/tmp/app-src",
+  "checklistSpreadsheetId": "<google-sheet-id>",
+  "checklistTab": "<tab name>",
+  "figma": {
+    "fileKey": "<figma-file-key>",
+    "screens": {}
+  },
+  "$comment": [
+    "Copy to <Project>/Emulator-Testing/config.json (this .example ships with the kit; the real",
+    "config never does). `appId` is what Maestro drives (== bundleId on iOS, package name on",
+    "Android). Android instead of `scheme`/`bundleId`/`simulator`: `package`, `apkPath`, `avd`.",
+    "Flutter: `platform`:\"flutter\" + `flutterTarget`:\"ios\"|\"android\" plus that target's fields (ios: simulator; android: avd).",
+    "`buildDir` is the git-less snapshot dir (EMULATOR_RULES §5) — NEVER build inside the repo."
+  ]
+}

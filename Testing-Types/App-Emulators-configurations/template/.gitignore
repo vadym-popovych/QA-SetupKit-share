@@ -1,0 +1,10 @@
+# Emulator-Testing scaffold — keep run artifacts and filled configs out of git.
+# The .example files stay tracked; your filled copies and outputs do not.
+runs/
+config.json
+mapping.json
+recurring-logs/
+.recurring-count
+recurring.stop
+STATE.md
+recurring-prompt.txt

@@ -1,0 +1,157 @@
+{
+  "$comment": "A SYNTHETIC example — every bug, module, name and URL here is invented. It exercises the whole contract (the client's own severity scale · severity provenance, owner vs agent-proposed with the branch that fired · module provenance, container/subject/parent/summary-inferred/agent-placed/unplaced · the General debt band · evidence hostRisk · a module that was tested and came back clean) so a teammate can run the tools end to end before touching real data. NEVER put a client's bugs in the kit: the kit ships.",
+
+  "summaryId": "BS-2026-07-14-acme",
+  "project": "Acme Shop (example)",
+  "generatedAt": "2026-07-14T09:00",
+  "environment": "staging build 4.2.0",
+  "source": {
+    "kind": "tracker-export",
+    "ref": "https://tracker.example.com/projects/acme",
+    "note": "Synthetic example. The tracker records no severity, so every severity here was assigned outside it — see severitySource on each row."
+  },
+
+  "severityScale": ["Critical", "Major", "Minor", "Trivial"],
+  "severityMap": { "Critical": "Critical", "Major": "Major", "Minor": "Low", "Trivial": "Info" },
+
+  "sites": [
+    {
+      "id": "storefront",
+      "name": "Storefront",
+      "url": "https://shop.example.com",
+      "pages": [
+        {
+          "id": "checkout",
+          "name": "Checkout",
+          "issues": [
+            {
+              "id": "ex-101",
+              "summary": "The order is charged but never appears in the order history after paying by card.",
+              "severity": "Critical",
+              "severitySource": "owner",
+              "status": "open",
+              "moduleSource": "container",
+              "notes": "Reported by two customers in one day.",
+              "evidence": [
+                { "url": "https://drive.example.com/evidence/ex-101.png", "kind": "screenshot", "hostRisk": "durable" }
+              ]
+            },
+            {
+              "id": "ex-102",
+              "summary": "The promo-code field rejects a valid code on the first attempt; it works on the second.",
+              "severity": "Major",
+              "severitySource": "agent-proposed",
+              "severityRationale": "core feature broken, but the user can still get there — it works on a retry",
+              "status": "open",
+              "moduleSource": "container",
+              "evidence": [
+                { "url": "https://shots.example.net/ex-102", "kind": "screen-record", "hostRisk": "expiring" }
+              ]
+            },
+            {
+              "id": "ex-103",
+              "summary": "The total is right-aligned, while the mockup aligns it left.",
+              "severity": "Trivial",
+              "severitySource": "agent-proposed",
+              "severityRationale": "cosmetic — nothing is hidden and nothing behaves incorrectly",
+              "status": "fixed",
+              "moduleSource": "container"
+            }
+          ]
+        },
+        {
+          "id": "sign-in",
+          "name": "Sign in",
+          "issues": [
+            {
+              "id": "ex-201",
+              "summary": "Sign-in with a third-party provider fails with \"Authentication failed\": a user who registered that way cannot get in at all.",
+              "severity": "Critical",
+              "severitySource": "agent-proposed",
+              "severityRationale": "no access to the app — there is no other door for those users",
+              "status": "open",
+              "moduleSource": "subject",
+              "trackerRef": "https://tracker.example.com/issues/201",
+              "evidence": [
+                { "url": "https://drive.example.com/evidence/ex-201.png", "kind": "screenshot", "hostRisk": "durable" }
+              ]
+            },
+            {
+              "id": "ex-202",
+              "summary": "The account name is clipped inside its card when it is longer than 20 characters.",
+              "severity": "Minor",
+              "severitySource": "agent-proposed",
+              "severityRationale": "the design deviation CUTS the text — seen on the evidence, not read off the sentence",
+              "status": "open",
+              "moduleSource": "summary-inferred"
+            }
+          ]
+        },
+        {
+          "id": "wishlist",
+          "name": "Wishlist",
+          "issues": []
+        }
+      ]
+    },
+    {
+      "id": "admin",
+      "name": "Admin panel",
+      "url": "https://admin.example.com",
+      "pages": [
+        {
+          "id": "orders",
+          "name": "Orders",
+          "issues": [
+            {
+              "id": "ex-301",
+              "summary": "Exporting orders to CSV drops every row after the first thousand, with no warning.",
+              "severity": "Major",
+              "severitySource": "owner",
+              "status": "open",
+              "moduleSource": "parent",
+              "notes": "Silent truncation — the export looks complete."
+            },
+            {
+              "id": "ex-302",
+              "summary": "The status filter keeps its previous value after the page is reloaded.",
+              "severity": "Minor",
+              "severitySource": "agent-proposed",
+              "severityRationale": "works, but not per spec / a secondary flow — nobody is blocked",
+              "status": "open",
+              "moduleSource": "agent-placed"
+            }
+          ]
+        },
+        {
+          "id": "general",
+          "name": "General",
+          "unplaced": true,
+          "issues": [
+            {
+              "id": "ex-901",
+              "summary": "The bottom navigation bar has too much padding on every screen.",
+              "severity": "Trivial",
+              "severitySource": "agent-proposed",
+              "severityRationale": "cosmetic — app-wide, and it names no single place",
+              "status": "open",
+              "moduleSource": "unplaced"
+            },
+            {
+              "id": "ex-902",
+              "summary": "The layout breaks on the Orders and Reports screens when the system font size is increased.",
+              "severity": "Major",
+              "severitySource": "agent-proposed",
+              "severityRationale": "unreadable for users who need large type — but it names TWO places, so it is filed under neither",
+              "status": "open",
+              "moduleSource": "unplaced",
+              "evidence": [
+                { "url": "https://shots.example.net/ex-902", "kind": "screenshot", "hostRisk": "expiring" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "qa-setupkit/checklist-row.schema.json",
+  "title": "Checklist check row (v5 template)",
+  "type": "object",
+  "required": [
+    "page",
+    "section",
+    "check"
+  ],
+  "properties": {
+    "page": {
+      "type": "string",
+      "$comment": "page band name, e.g. 'Login screen'"
+    },
+    "section": {
+      "type": "string",
+      "$comment": "section in column A, e.g. 'State — default'"
+    },
+    "check": {
+      "type": "string",
+      "minLength": 5,
+      "$comment": "check text in column B; should IMPLY its oracle ('matches Figma node X')"
+    },
+    "statuses": {
+      "type": "array",
+      "$comment": "one entry per platform sub-column, in block order. '' = not run YET this round (temporary; MUST carry a comment). 'Skipped' = will NOT be run on this platform — feature absent, screen unreachable, blocked and won't unblock — a decision (MUST carry a comment with the reason). Never invent other values; the Sheet dropdown knows only these three. The mobile result column may render 'Partial' (some active platform still empty) — that is a computed value, NOT a status, and never appears here.",
+      "items": {
+        "enum": [
+          "Passed",
+          "Failed",
+          "Skipped",
+          ""
+        ]
+      }
+    },
+    "comment": {
+      "type": "string",
+      "$comment": "column E area; REQUIRED when: any status empty, any Failed (bug link), or sources contradict (even if Passed)"
+    },
+    "bugRef": {
+      "type": "string",
+      "pattern": "^BUG-[0-9]{3,}$"
+    },
+    "oracle": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "enum": [
+            "spec",
+            "golden-master",
+            "differential",
+            "invariant",
+            "metamorphic",
+            "consistency",
+            "llm-judge",
+            "human"
+          ]
+        },
+        "source": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

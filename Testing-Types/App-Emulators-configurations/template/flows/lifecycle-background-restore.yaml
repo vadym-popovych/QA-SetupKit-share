@@ -1,0 +1,17 @@
+# Layer 2 · process lifecycle: background → kill → relaunch, assert state restored.
+# The single most under-tested mobile dimension — the OS reclaims a backgrounded app's
+# memory and the app must rebuild its state on cold relaunch without losing the user's work.
+# `clearState: false` on the second launch is the whole point: we relaunch the SAME install.
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+# put the app in a state worth preserving (TODO: your app's equivalent)
+- tapOn: "Add to cart"          # TODO
+- assertVisible: "1 item"       # TODO: confirm the state exists before we kill
+- pressKey: Home                # background (both platforms)
+- stopApp                       # OS-reclaim simulation: fully kill the process
+- launchApp:
+    clearState: false           # relaunch the SAME install — NOT a cold wipe
+- assertVisible: "1 item"       # TODO: the state survived process death
+- takeScreenshot: lifecycle-background-restore

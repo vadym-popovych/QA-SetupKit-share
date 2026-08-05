@@ -1,0 +1,11 @@
+# Layer 2 · baseline: cold launch reaches the first screen.
+# appId is injected by the runner (run.sh exports APP_ID from config.json).
+# Cross-platform: written against VISIBLE TEXT / accessibility ids, never coordinates,
+# so the same flow runs on iOS, Android and Flutter wherever the UI matches
+# (EMULATOR_RULES §4). Replace the TODO strings with the app's real copy/ids.
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true          # cold start — no leftover session
+- assertVisible: "Get started" # TODO: first-screen anchor (text or id:onboarding_title)
+- takeScreenshot: smoke-launch

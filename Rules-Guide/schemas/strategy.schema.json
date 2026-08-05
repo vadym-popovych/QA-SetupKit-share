@@ -1,0 +1,270 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "qa-setupkit/strategy.schema.json",
+  "title": "Test strategy machine summary (strategy.json)",
+  "$comment": "Formalizes Test-Strategy-and-Planning/template/strategy.example.json — the machine-readable mirror of STRATEGY.md",
+  "type": "object",
+  "required": [
+    "project",
+    "strategyRevision",
+    "status",
+    "scope",
+    "riskMatrix",
+    "entryCriteria",
+    "exitCriteria",
+    "stopConditions"
+  ],
+  "properties": {
+    "project": {
+      "type": "string"
+    },
+    "strategyRevision": {
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "draft",
+        "approved"
+      ]
+    },
+    "approvedBy": {
+      "type": "string"
+    },
+    "environments": {
+      "type": "object",
+      "properties": {
+        "staging": {
+          "type": "string"
+        },
+        "productionTesting": {
+          "enum": [
+            false
+          ],
+          "$comment": "hard-pinned false — production is never tested"
+        }
+      },
+      "additionalProperties": false
+    },
+    "qualityGoals": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "modules": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 2
+      },
+      "$comment": "ordered product-module names = the band order of the Test-Cases Sheet and TEST_CASES.md sections (test-case.area names one of these). A case whose area is not listed still renders, after the listed ones - never silently dropped"
+    },
+    "scope": {
+      "type": "object",
+      "required": [
+        "in"
+      ],
+      "properties": {
+        "in": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "unit",
+              "type"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[SERI][0-9]+$"
+              },
+              "unit": {
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "screen",
+                  "endpoint",
+                  "role",
+                  "integration"
+                ]
+              },
+              "source": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "out": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "unit",
+              "reason"
+            ],
+            "properties": {
+              "unit": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "testLevels": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "level",
+          "kit",
+          "trigger"
+        ],
+        "properties": {
+          "level": {
+            "type": "string"
+          },
+          "kit": {
+            "type": "string"
+          },
+          "appliesTo": {
+            "type": "string"
+          },
+          "trigger": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "riskMatrix": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "fear",
+          "likelihood",
+          "impact",
+          "risk",
+          "depth"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "fear": {
+            "type": "string"
+          },
+          "likelihood": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 3
+          },
+          "impact": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 3
+          },
+          "risk": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9
+          },
+          "depth": {
+            "enum": [
+              "deep",
+              "standard",
+              "smoke"
+            ]
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "depthMapping": {
+      "type": "object"
+    },
+    "entryCriteria": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      }
+    },
+    "exitCriteria": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      }
+    },
+    "definitionOfDone": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "stopConditions": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "exit-criteria-met",
+          "time-box-exhausted",
+          "diminishing-returns",
+          "blocked"
+        ]
+      }
+    },
+    "escalateOn": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "plans": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "date",
+          "build",
+          "file"
+        ],
+        "properties": {
+          "date": {
+            "type": "string"
+          },
+          "build": {
+            "type": "string"
+          },
+          "file": {
+            "type": "string"
+          },
+          "stopCondition": {
+            "enum": [
+              "exit-criteria-met",
+              "time-box-exhausted",
+              "diminishing-returns",
+              "blocked",
+              null
+            ]
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

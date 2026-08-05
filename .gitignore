@@ -1,0 +1,48 @@
+# macOS
+.DS_Store
+
+# Dependencies — teammates run `npm install` themselves
+node_modules/
+
+# ── Secrets (belt-and-braces: also ignored by per-folder .gitignore) ──
+# Google OAuth for the google-sheets MCP — each user creates their own
+MCP-configurations/mcp-sheets/credentials.json
+MCP-configurations/mcp-sheets/token.json
+# Grafana service-account token
+MCP-configurations/grafana/.token
+# Redmine (tracker.example.com) API key
+MCP-configurations/redmine/.token
+# Mega.nz account credentials
+MCP-configurations/mega/credentials.json
+# Test-account pools hold passwords (users.json is credentials by convention, everywhere;
+# the old 'Load-Testing/**' prefix was orphaned by the 12/07 folder regroup and left
+# non-template users.json trackable — made location-proof 28/07/2026)
+**/users.json
+# Usage browser-scraper Chrome profile — holds live claude.ai session cookies
+Claude-Extra-Skills-Features/Usage/usage-scraper/profile/
+
+# Logs & local artifacts
+*.log
+# Self-healing locators rubric configs carry real stand creds (Loop-Engineering kit);
+# canonical location is <Project>/UI-Automation/rubric.config.json OUTSIDE this repo,
+# but ignore everywhere as belt-and-braces
+**/rubric.config.json
+**/rubric-baseline/
+**/rubric-verdicts/
+# PageSpeed Insights API key (free, per-user — never shared)
+MCP-configurations/pagespeed/.token
+# Memory-Eval gate state — local, per-machine, never shippable. `.warned/` filenames are LIVE chat
+# session ids; `.last-green` is a hash of YOUR memory file and can never match a teammate's.
+# Default state dir is the script's own folder (override: EVAL_GATE_STATE_DIR), i.e. inside this
+# repo — so these must be ignored for the unattended `git add -A` backup to stay safe.
+Claude-Extra-Skills-Features/Memory-Eval/.last-green
+Claude-Extra-Skills-Features/Memory-Eval/.warned/
+# A REAL scenario set and any run result are authored about the user's OWN config: their situations and
+# oracles carry exactly the nouns (clients, hosts, ids) that must never ship, and a result quotes the
+# measured memory file verbatim. So everything .json here is ignored by default and the shipped example is
+# the single explicit exception — fail-closed: a new example must be un-ignored deliberately, whereas a
+# forgotten pattern would silently track someone's data. SETUP tells the user to copy the example into this
+# very directory, so this is the landing spot, not a hypothetical.
+Claude-Extra-Skills-Features/Memory-Eval/*.json
+!Claude-Extra-Skills-Features/Memory-Eval/scenarios.example.json
+Claude-Extra-Skills-Features/Memory-Eval/runs/

@@ -1,0 +1,7 @@
+# Test-account pool holds passwords — never commit it.
+users.json
+
+# k6 result artifacts
+*.json.gz
+summary.json
+results/

@@ -1,0 +1,24 @@
+{
+  "baseUrl": "https://your-test-stand.example.com",
+  "outDir": "/absolute/path/to/<Project>/UI-Automation",
+  "auth": {
+    "mode": "creatio-api | form | none",
+    "user": "TestUser",
+    "password": "TestPassword",
+    "creatioApi": { "loginPath": "/ServiceModel/AuthService.svc/Login" },
+    "form": {
+      "loginUrl": "/Login/NuiLogin.aspx",
+      "userSelector": "#loginEdit-el",
+      "passwordSelector": "#passwordEdit-el",
+      "submitSelector": "[data-item-marker=\"btnLogin\"]",
+      "successUrlPattern": "Shell"
+    }
+  },
+  "viewport": { "width": 1680, "height": 950 },
+  "settleMs": 10000,
+  "pages": [
+    { "name": "00-login-page", "path": "/Login/NuiLogin.aspx", "beforeAuth": true },
+    { "name": "10-SectionOne_ListPage", "path": "/0/Shell/#Section/SectionOne_ListPage" },
+    { "name": "10-SectionTwo_ListPage", "path": "/0/Shell/#Section/SectionTwo_ListPage" }
+  ]
+}

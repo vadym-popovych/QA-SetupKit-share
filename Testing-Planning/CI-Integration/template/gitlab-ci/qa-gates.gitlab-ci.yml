@@ -1,0 +1,204 @@
+# QA gates — GitLab CI (MR tier + nightly)
+#
+# PROPOSED ARTEFACT. The QA agent writes this to <Project>/CI-Integration/proposed/;
+# installing it (→ .gitlab-ci.yml, or `include:` it from one) is the OWNER's action.
+# The agent never pushes into the app repository.
+#
+# Configure KIT_DIR / QA_DIR / NODE_DIR below exactly as in the GitHub template (see its
+# header for the two topologies: pipeline in the QA repo vs in the app repo).
+#
+# Required CI/CD variables (Settings → CI/CD → Variables, all MASKED):
+#   STAGING_BASE_URL · TEST_USER_EMAIL · TEST_USER_PASSWORD
+# Optional: ALLOWED_ENV_REGEX (widen the staging-host guard deliberately)
+#
+# ⚠️ GITLAB FAIL-FAST — the one thing you must not "tidy up": GitLab runs a job's `script:`
+# list under an implicit `set -e`, so the FIRST non-zero command ends the job. A bare list of
+# commands would therefore skip the emitters whenever a suite is red — producing no
+# run-result and no candidates on exactly the runs that need them. That is why the jobs below
+# use a single `|`-block with explicit exit capture (`|| fail=1`) and re-raise at the end.
+# Nothing is masked: a non-green sweep still fails the job.
+#
+# HOW THE GATE GATES: the kit tools (a11y-scan.mjs, visual-diff.mjs) report and exit 0 even
+# when they find violations — they are NOT the gate. `ci-run-result.mjs` reads their report,
+# derives the verdict, writes a schema-valid run-result and exits 1 (fail) / 3 (blocked).
+#
+# Rules (CI_RULES.md): never `allow_failure: true` on a gate (GitLab's continue-on-error —
+# it turns a red gate green); a gate that cannot run is BLOCKED; never re-record goldens in
+# CI; gate tier is free and ≤10 min; staging only.
+
+stages: [preflight, gate, nightly]
+
+default:
+  image: mcr.microsoft.com/playwright:v1.47.0-jammy
+  before_script:
+    - npm ci --prefix "$NODE_DIR"
+
+variables:
+  KIT_DIR: 'QA-SetupKit'      # ← configure per topology
+  QA_DIR: '<Project>'         # ←
+  NODE_DIR: '<Project>'       # ← folder holding package.json (playwright + axe-core)
+  BASE_URL: $STAGING_BASE_URL
+  RUN_ID: $CI_PIPELINE_ID
+
+# Fails loudly when a gate COULD NOT run — otherwise a skipped gate reads as a passing one.
+preflight:
+  stage: preflight
+  image: curlimages/curl:latest
+  before_script: []
+  script:
+    - test -n "$BASE_URL" || { echo "STAGING_BASE_URL is not set — gates BLOCKED, not passed"; exit 1; }
+    # Fails CLOSED. Widen via the ALLOWED_ENV_REGEX variable, never by deleting the check.
+    - echo "$BASE_URL" | grep -Eq "${ALLOWED_ENV_REGEX:-(staging|stg|dev|test|qa|preview|localhost)}" || { echo "BASE_URL ($BASE_URL) is not an allowed test environment — refusing to gate"; exit 1; }
+    - curl -fsS --max-time 20 -o /dev/null "$BASE_URL"
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    - if: $CI_PIPELINE_SOURCE == "web"
+
+.gate:
+  stage: gate
+  needs: [preflight]
+  timeout: 10 minutes
+  allow_failure: false          # NEVER flip this to true on a gate — see CI_RULES.md
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_PIPELINE_SOURCE == "web"
+  artifacts:
+    when: always
+    expire_in: 2 weeks
+    paths:
+      - artifacts/
+      - $QA_DIR/Accessibility-Testing/scans/     # the evidence itself, not just the verdict
+      - $QA_DIR/Visual-Regression/diff/
+
+# G-1 · E2E smoke (P0 slice). The emitter must see the report even when the suite is red,
+# so the suite's exit code is captured rather than allowed to end the job.
+e2e-smoke:
+  extends: .gate
+  script:
+    - |
+      set -uo pipefail
+      START_MS=$(date +%s000)
+      mkdir -p artifacts/e2e
+      ( cd "$NODE_DIR" && npx playwright test --grep @high --reporter=json ) > artifacts/e2e/report.json
+      echo "playwright exit code: $?"
+      node "$QA_DIR/CI-Integration/tools/ci-run-result.mjs" \
+        --discipline ui-automation --from artifacts/e2e \
+        --schemas "$KIT_DIR/Rules-Guide/schemas/validate.mjs" \
+        --not-before "$START_MS" \
+        --run-id "ci-$RUN_ID-e2e" --out artifacts/e2e/run-result.json
+
+# G-2 · Accessibility (WCAG 2.2 AA, axe-core) — scan reports, emitter gates.
+# Every confirmed violation fails by default; narrowing with --fail-on is an owner decision
+# recorded in GATES.md. SCAN-FAILED → blocked, never pass.
+a11y:
+  extends: .gate
+  script:
+    - |
+      set -uo pipefail
+      rm -rf "$QA_DIR/Accessibility-Testing/scans"     # a stale report must not be scored as this run
+      START_MS=$(date +%s000)
+      node "$QA_DIR/Accessibility-Testing/tools/a11y-scan.mjs"
+      node "$QA_DIR/CI-Integration/tools/ci-run-result.mjs" \
+        --discipline accessibility --from "$QA_DIR/Accessibility-Testing/scans" \
+        --schemas "$KIT_DIR/Rules-Guide/schemas/validate.mjs" \
+        --not-before "$START_MS" \
+        --run-id "ci-$RUN_ID-a11y" --out artifacts/a11y/run-result.json
+
+# G-3 · Visual regression — NO-BASELINE / CAPTURE-FAILED come back BLOCKED, not pass.
+# Never re-record a golden here; re-baselining is owner-approved and logged in BASELINES.md.
+visual:
+  extends: .gate
+  script:
+    - |
+      set -uo pipefail
+      rm -f "$QA_DIR/Visual-Regression/report.json"
+      START_MS=$(date +%s000)
+      node "$QA_DIR/Visual-Regression/tools/visual-diff.mjs"
+      node "$QA_DIR/CI-Integration/tools/ci-run-result.mjs" \
+        --discipline visual-regression --from "$QA_DIR/Visual-Regression" \
+        --schemas "$KIT_DIR/Rules-Guide/schemas/validate.mjs" \
+        --not-before "$START_MS" \
+        --run-id "ci-$RUN_ID-visual" --out artifacts/visual/run-result.json
+
+# G-5 · Machine contracts — QA artefacts in the MR must validate.
+# GIT_DEPTH: 0 is not optional: a shallow clone has no merge base, and a gate that cannot
+# compute its diff must go RED, not green.
+schemas:
+  stage: gate
+  needs: []
+  image: node:20-alpine
+  before_script: []
+  variables:
+    GIT_DEPTH: 0
+  script:
+    - apk add --no-cache git
+    - git fetch --no-tags origin "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"
+    - |
+      set -euo pipefail
+      # No `|| true` anywhere: if the diff base cannot be resolved, the gate is BLOCKED.
+      base=$(git merge-base "origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" HEAD) || {
+        echo "cannot determine the diff base — schemas gate BLOCKED, not passed"; exit 1; }
+      files=$(git diff --name-only --diff-filter=d "$base" HEAD -- '*.json')
+      # Only the kit's real artefact homes — not any repo folder that happens to be named
+      # coverage/ (istanbul) or runs/. grep exit 1 = no matches (fine); ≥2 = a real error.
+      # `run-result.json$`, not the whole runs/ folder: a run dir also holds details.json
+      # (evidence, not a run-result) — validating that as one would fail a good artefact.
+      changed=$(printf '%s\n' "$files" | { grep -E '(/bugs/|/test-cases/cases/|/runs/.*/run-result\.json$|/Test-Strategy/coverage\.json$)' || [ $? -eq 1 ]; })
+      [ -n "$changed" ] || { echo "no QA artefacts in this diff"; exit 0; }
+      printf '%s\n' "$changed" | while IFS= read -r f; do
+        [ -n "$f" ] || continue
+        case "$f" in
+          */bugs/*)             kind=bug ;;
+          */test-cases/cases/*) kind=test-case ;;
+          */run-result.json)    kind=run-result ;;
+          */coverage.json)      kind=coverage ;;
+          *)                    continue ;;
+        esac
+        echo "validating $f as $kind"
+        node "$KIT_DIR/Rules-Guide/schemas/validate.mjs" "$kind" "$f"
+      done
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+
+# Nightly — non-blocking sweeps that produce bug CANDIDATES (never tracker posts).
+# Every sweep runs and every sweep gets a result even if an earlier one is red — see the
+# FAIL-FAST note at the top of this file for why this is one block with `|| fail=1`.
+nightly-sweep:
+  stage: nightly
+  needs: [preflight]
+  timeout: 45 minutes
+  script:
+    - |
+      set -uo pipefail
+      fail=0
+      mkdir -p artifacts/regression artifacts/a11y artifacts/visual
+      rm -rf "$QA_DIR/Accessibility-Testing/scans"; rm -f "$QA_DIR/Visual-Regression/report.json"
+      START_MS=$(date +%s000)
+
+      ( cd "$NODE_DIR" && npx playwright test --reporter=json ) > artifacts/regression/report.json || fail=1
+      node "$QA_DIR/Accessibility-Testing/tools/a11y-scan.mjs" || fail=1
+      node "$QA_DIR/Visual-Regression/tools/visual-diff.mjs"   || fail=1
+
+      emit() {   # $1 discipline · $2 report dir · $3 artefact subdir
+        node "$QA_DIR/CI-Integration/tools/ci-run-result.mjs" \
+          --discipline "$1" --from "$2" \
+          --schemas "$KIT_DIR/Rules-Guide/schemas/validate.mjs" \
+          --not-before "$START_MS" \
+          --run-id "ci-$RUN_ID-$1" --out "artifacts/$3/run-result.json" || fail=1
+      }
+      emit regression        artifacts/regression                  regression
+      emit accessibility     "$QA_DIR/Accessibility-Testing/scans" a11y
+      emit visual-regression "$QA_DIR/Visual-Regression"           visual
+
+      node "$QA_DIR/CI-Integration/tools/ci-run-result.mjs" --candidates --from artifacts --out artifacts/candidates.md
+      exit $fail
+  artifacts:
+    when: always
+    expire_in: 1 month
+    paths:
+      - artifacts/
+      - $QA_DIR/Accessibility-Testing/scans/
+      - $QA_DIR/Visual-Regression/diff/
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"

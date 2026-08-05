@@ -1,0 +1,12 @@
+{
+  "$comment": "Copy to <Project>/API-Testing/config.json. Values here are URLs and NAMES only — never secret values: tokens live in the environment variables the suite references as {env.NAME}, and api-run.mjs refuses to start while any of them is unset. baseUrl must be staging/dev — functional suites create, update and delete, so the runner refuses environment 'production' with no override.",
+  "project": "<Project>",
+  "environment": "staging",
+  "baseUrl": "https://api.staging.example.com",
+  "timeoutMs": 15000,
+  "secrets": {
+    "$comment": "Documentation for whoever runs the suite — which variables to export and what each one is. The runner's ground truth is the suite itself: it scans for {env.*} references, so a variable listed here but unused is harmless, and one used but unlisted is still enforced.",
+    "API_TOKEN": "bearer token of the seeded staging test user",
+    "API_TOKEN_SECOND_USER": "token of a DIFFERENT user — authorization checks need someone else's resource"
+  }
+}

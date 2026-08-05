@@ -1,0 +1,183 @@
+# QA gates — nightly / release tier (GitHub Actions)
+#
+# PROPOSED ARTEFACT — the owner installs it; the agent never pushes into the app repo.
+# Not a merge gate: nightly sweeps REPORT and produce bug CANDIDATES. The job still goes red
+# when something is wrong (that is the signal) — it just isn't a required check.
+#
+# Configure KIT_DIR / QA_DIR / NODE_DIR exactly as in qa-gates.yml (see its header for the
+# two topologies). Required secrets: STAGING_BASE_URL · TEST_USER_EMAIL · TEST_USER_PASSWORD.
+#
+# Tier boundaries (CI_RULES.md): the release job may run a load **smoke** — never a
+# stress/peak run, never an LLM-generation series, never an active security scan, never
+# production. Those stay owner-triggered.
+#
+# Same gating model as qa-gates.yml: the kit tools report and exit 0; `ci-run-result.mjs`
+# derives the verdict and carries the exit code.
+
+name: QA nightly
+
+on:
+  schedule:
+    - cron: '0 2 * * *'      # 02:00 UTC — after the day's merges have landed
+  workflow_dispatch:
+    inputs:
+      tier:
+        description: 'nightly | release'
+        required: true
+        default: 'nightly'
+        type: choice
+        options: [nightly, release]
+
+permissions:
+  contents: read
+
+env:
+  KIT_DIR: QA-SetupKit          # ← configure per topology (see qa-gates.yml header)
+  QA_DIR: <Project>             # ←
+  NODE_DIR: <Project>           # ←
+  BASE_URL: ${{ secrets.STAGING_BASE_URL }}
+
+jobs:
+  # Same guard as the PR tier. The nightly and (especially) the load job must never fire at an
+  # unverified target: a sweep pointed at production is worse than no sweep.
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Secrets present and target is a test environment
+        env:
+          ALLOWED: ${{ vars.ALLOWED_ENV_REGEX || '(staging|stg|dev|test|qa|preview|localhost)' }}
+        run: |
+          set -euo pipefail
+          test -n "${BASE_URL:-}" || { echo "::error::STAGING_BASE_URL is not set — sweeps BLOCKED, not passed"; exit 1; }
+          echo "$BASE_URL" | grep -Eq "$ALLOWED" || {
+            echo "::error::BASE_URL ($BASE_URL) does not match ALLOWED_ENV_REGEX ($ALLOWED) — refusing to run against it"; exit 1; }
+      - name: Target is reachable
+        run: curl -fsS --max-time 20 -o /dev/null "$BASE_URL"
+
+  full-sweep:
+    needs: preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4          # topology B only — delete in topology A
+        with:
+          repository: <org>/<qa-repo>
+          path: qa
+          token: ${{ secrets.QA_REPO_TOKEN }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: ${{ env.NODE_DIR }}/package-lock.json
+      - run: npm ci
+        working-directory: ${{ env.NODE_DIR }}
+      - run: npx playwright install --with-deps chromium
+        working-directory: ${{ env.NODE_DIR }}
+
+      - name: Clear last run's reports     # stale reports must never be scored as tonight's run
+        run: |
+          rm -rf "$QA_DIR/Accessibility-Testing/scans"
+          rm -f  "$QA_DIR/Visual-Regression/report.json"
+      - name: Job start marker
+        run: echo "JOB_START_MS=$(date +%s000)" >> "$GITHUB_ENV"
+
+      # One block, explicit exit capture: every sweep must run and every sweep must get a
+      # result even when an earlier one is red — otherwise the nights that need the evidence
+      # most are the nights that produce none. Nothing is masked: `fail` is re-raised at the end.
+      - name: Sweeps + verdicts + run-results
+        run: |
+          set -uo pipefail
+          fail=0
+          mkdir -p artifacts/regression artifacts/a11y artifacts/visual
+          ( cd "$NODE_DIR" && npx playwright test --reporter=json ) > artifacts/regression/report.json || fail=1
+          node "$QA_DIR/Accessibility-Testing/tools/a11y-scan.mjs" || fail=1
+          node "$QA_DIR/Visual-Regression/tools/visual-diff.mjs"   || fail=1
+
+          emit() {   # $1 discipline · $2 report dir · $3 artefact subdir
+            node "$QA_DIR/CI-Integration/tools/ci-run-result.mjs" \
+              --discipline "$1" --from "$2" \
+              --schemas "$KIT_DIR/Rules-Guide/schemas/validate.mjs" \
+              --not-before "$JOB_START_MS" \
+              --run-id "ci-${{ github.run_id }}-$1" --out "artifacts/$3/run-result.json" || fail=1
+          }
+          emit regression        artifacts/regression                     regression
+          emit accessibility     "$QA_DIR/Accessibility-Testing/scans"    a11y
+          emit visual-regression "$QA_DIR/Visual-Regression"              visual
+
+          # Candidates ≠ bugs. The dedup → severity-branch → owner-confirmation funnel
+          # (BUG_REPORTS_RULES) is untouched: nothing here reaches the tracker.
+          node "$QA_DIR/CI-Integration/tools/ci-run-result.mjs" --candidates --from artifacts --out artifacts/candidates.md
+          exit $fail
+        env:
+          TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+          TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: qa-nightly-${{ github.run_id }}
+          path: |
+            artifacts
+            ${{ env.QA_DIR }}/Accessibility-Testing/scans
+            ${{ env.QA_DIR }}/Visual-Regression/diff
+
+  # Release tier — manual dispatch only, and only the automatable slice of
+  # PLAYBOOK_release-candidate. The RC decision itself stays a 🔴 owner gate.
+  release-extras:
+    needs: preflight                       # the load job MUST NOT fire at an unverified target
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.tier == 'release' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SMOKE_SCENARIO: <Project>/Load-Testing/scenarios/smoke.js   # ← set to the real path
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - name: Scenario exists              # a missing scenario is a blocked job, not a silent skip
+        run: test -f "$SMOKE_SCENARIO" || { echo "::error::$SMOKE_SCENARIO not found — set SMOKE_SCENARIO to the project's k6 smoke scenario"; exit 1; }
+      - name: Install k6
+        run: |
+          set -euo pipefail
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg \
+            --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" \
+            | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update && sudo apt-get install -y k6
+      - name: Load SMOKE only (never stress/peak in CI)
+        run: |
+          set -uo pipefail
+          mkdir -p artifacts/load
+          k6 run --summary-export artifacts/load/summary.json "$SMOKE_SCENARIO"
+          echo "k6 exit code: $?"
+      # k6's summary is not one of the kit report shapes, so the generic adapter needs a
+      # { passed, failed, skipped } summary. Derive it from k6's thresholds — a crossed
+      # threshold is a failed check, not a footnote.
+      - name: Normalise k6 summary + run-result
+        if: ${{ !cancelled() }}
+        run: |
+          set -euo pipefail
+          node -e '
+            const fs = require("fs");
+            const p = "artifacts/load/summary.json";
+            if (!fs.existsSync(p)) process.exit(0);              // emitter will report BLOCKED
+            const s = JSON.parse(fs.readFileSync(p, "utf8"));
+            const th = Object.entries(s.metrics ?? {}).flatMap(([m, v]) =>
+              Object.entries(v.thresholds ?? {}).map(([t, r]) => ({ metric: m, threshold: t, ok: r.ok !== false })));
+            fs.writeFileSync("artifacts/load/report.json", JSON.stringify({
+              passed: th.filter(t => t.ok).length,
+              failed: th.filter(t => !t.ok).length,
+              skipped: 0,
+              details: th.filter(t => !t.ok),
+            }, null, 2));
+          '
+          node "$QA_DIR/CI-Integration/tools/ci-run-result.mjs" \
+            --discipline load --from artifacts/load \
+            --schemas "$KIT_DIR/Rules-Guide/schemas/validate.mjs" \
+            --run-id "ci-${{ github.run_id }}-load-smoke" --out artifacts/load/run-result.json
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with: { name: load-smoke, path: artifacts/load }

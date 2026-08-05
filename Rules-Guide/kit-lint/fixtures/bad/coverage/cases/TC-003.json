@@ -1,0 +1,18 @@
+{
+  "id": "TC-003",
+  "title": "Ghost \u2014 happy path",
+  "area": "Ghost",
+  "steps": [
+    "open the app",
+    "do the thing"
+  ],
+  "expected": "the thing happened",
+  "oracle": {
+    "type": "spec",
+    "source": "acceptance criteria"
+  },
+  "priority": "High",
+  "traceability": {
+    "strategyUnit": "S9"
+  }
+}

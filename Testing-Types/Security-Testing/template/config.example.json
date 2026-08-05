@@ -1,0 +1,47 @@
+{
+  "target": "https://staging.example.com",
+  "scopeConfirmed": false,
+  "activeScanAuthorized": false,
+  "notes": "Set scopeConfirmed=true only after the owner authorizes this exact host. activeScanAuthorized gates the ZAP full scan / injection probes.",
+  "api": {
+    "baseUrl": "https://staging-api.example.com",
+    "loginPath": "/auth/login"
+  },
+  "accounts": {
+    "attacker": {
+      "email": "qa+attacker@example.com",
+      "password": "REPLACE_ME",
+      "role": "member",
+      "notes": "normal user; tries to reach victim's objects"
+    },
+    "victim": {
+      "email": "qa+victim@example.com",
+      "password": "REPLACE_ME",
+      "role": "member",
+      "notes": "owns the objects the attacker must NOT reach (IDOR target)"
+    },
+    "admin": {
+      "email": "qa+admin@example.com",
+      "password": "REPLACE_ME",
+      "role": "admin",
+      "notes": "allow-side of the access-control matrix"
+    }
+  },
+  "idorResources": [
+    {
+      "name": "book",
+      "ownerRead": "/books/{id}",
+      "method": "GET",
+      "adminOnly": false,
+      "sampleVictimId": "REPLACE_WITH_AN_ID_THE_VICTIM_ACCOUNT_OWNS"
+    },
+    {
+      "name": "admin-users",
+      "ownerRead": "/admin/users",
+      "method": "GET",
+      "adminOnly": true
+    }
+  ],
+  "sheetId": "<QA Google Sheet id for BUG-NNN rows>",
+  "outDir": "/absolute/path/to/<Project>/Security-Testing"
+}

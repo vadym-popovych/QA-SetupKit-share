@@ -1,0 +1,29 @@
+{
+  "project": "<Project>",
+  "target": "landing",
+  "baseUrl": "https://<staging-host>/",
+  "environment": "staging",
+  "figma": {
+    "source": "figma-dev-mode-mcp-server (local, port 3845)",
+    "page": "<Figma page name>",
+    "pageNodeId": "<page node id, e.g. 1993:399>",
+    "frames": {
+      "desktop": "<node id of the desktop design frame>",
+      "mobile": "<node id of the mobile design frame>",
+      "headerMobile": "<optional: key component node ids>"
+    },
+    "note": "Figma desktop lazy-loads pages — empty canvas via MCP means the page was never opened in the app."
+  },
+  "viewports": {
+    "mobile": [[360, 740], [375, 667], [390, 844]],
+    "tablet": [[768, 1024], [1024, 768]],
+    "desktop": [[1280, 800], [1440, 900], [1920, 1080]],
+    "large": [[2560, 1440]]
+  },
+  "smokeViewports": [[390, 844], [768, 1024], [1440, 900], [1920, 1080]],
+  "sections": [["cta", "#cta"], ["process", "#process"], ["reviews", "#reviews"], ["faq", "#faq"], ["footer", "footer"]],
+  "revealSelector": "[data-reveal]",
+  "revealVisibleClass": "is-visible",
+  "accordionSelector": ".faq-card",
+  "carouselContainerSelector": ".reviews-carousel-container"
+}

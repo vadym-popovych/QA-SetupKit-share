@@ -1,0 +1,179 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://qa-setupkit/schemas/test-report.schema.json",
+  "title": "Test report config — the NARRATIVE half of the end-of-engagement Test report",
+  "description": "The machine contract behind the Test-Report document (QA-Documentation/Custom-Reports/Test-Report). This file carries ONLY the narrative facts the results record cannot know: what the engagement set out to do, on which devices, with which types of testing. The numbers half of the report (the Test results tables) is NOT in this file by design — it is derived at build time from the Bug-Summary record (bug-summary.schema.json), so the same count can never live in two places and drift. The environment and the performed testing types are facts about what actually happened, which is why they are required and have no defaults: a generator that invents a device list writes fiction.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "reportId",
+    "project",
+    "date",
+    "environment",
+    "testDesign"
+  ],
+  "properties": {
+    "$comment": {
+      "type": "string"
+    },
+    "reportId": {
+      "type": "string",
+      "pattern": "^TR-[0-9]{4}-[0-9]{2}-[0-9]{2}(-[a-z0-9-]+)?$",
+      "description": "TR-<YYYY-MM-DD>[-slug]. One edition of the report, dated — same convention as the Bug-Summary's BS- id."
+    },
+    "project": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Must match the Bug-Summary record's project — the build refuses to marry a config to a record from a different engagement."
+    },
+    "date": {
+      "type": "string",
+      "pattern": "^[0-9]{2}/[0-9]{2}/[0-9]{4}$",
+      "description": "The issue date printed on the title page, dd/mm/yyyy (the workspace's future-date placeholder format)."
+    },
+    "preparedBy": {
+      "type": "string",
+      "description": "Who signs the report. A name or a role; omitted → the 'prepared by' line is not rendered."
+    },
+    "logoUrl": {
+      "type": "string",
+      "description": "Optional PUBLICLY fetchable image URL for the page-header logo (the Docs backend downloads it server-side; a Drive uc?export=download link on an anyone-with-link file works). Omitted → no header."
+    },
+    "purpose": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 1,
+      "description": "Override for the Purpose section paragraphs. Omitted → the generator's boilerplate with the project name substituted."
+    },
+    "objective": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "intro": {
+          "type": "string",
+          "description": "The sentence before the scope inventory. Omitted → library default."
+        },
+        "scope": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "description": "Explicit scope inventory: site name → list of module/page lines. Omitted → derived from the Bug-Summary record's pages (General excluded). Use when the PLANNED scope was wider than where bugs were found; the build warns if this override drops a page that has counted bugs."
+        }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "groups"
+      ],
+      "properties": {
+        "groups": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "items"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "description": "The platform group label: 'Android', 'iOS', 'Web (Mac OS)', …"
+              },
+              "items": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "description": "One line per device/browser ACTUALLY used: model, OS version, viewport. This is testimony, not decoration."
+              }
+            }
+          }
+        },
+        "note": {
+          "type": "string",
+          "description": "Optional trailing note (e.g. the web resolution range covered)."
+        }
+      }
+    },
+    "tools": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "The Testing Tools list. Omitted → the section renders with the two reference staples (Dev Tools; Bug Tracking Tool) — generic enough to be true of any engagement that produced a bug roll-up."
+    },
+    "testDesign": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "type"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "smoke",
+              "functional",
+              "ui",
+              "acceptance",
+              "regression",
+              "custom"
+            ],
+            "description": "A library type ships Goal/Process/Completion text; 'custom' supplies all of them. Only list types that were ACTUALLY performed."
+          },
+          "name": {
+            "type": "string",
+            "description": "Section heading. Required for 'custom'; optional override for library types."
+          },
+          "goal": {
+            "type": "string",
+            "description": "Override (library types) / required content (custom)."
+          },
+          "process": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Process description lines. Override (library) / required (custom)."
+          },
+          "completion": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Completion Criteria lines. Override (library) / required (custom). The build cross-checks 'all defects addressed' claims against the record's open counts and warns on contradiction."
+          }
+        }
+      }
+    },
+    "alsoPerformed": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Testing done by someone else, named in the intro line but given no section — e.g. 'Unit testing (provided by the developer)'. Credit without testimony."
+    }
+  }
+}

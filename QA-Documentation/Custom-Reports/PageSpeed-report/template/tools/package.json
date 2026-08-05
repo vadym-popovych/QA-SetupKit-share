@@ -1,0 +1,10 @@
+{
+  "$comment": "Only psi-report.mjs has dependencies. psi-run.mjs (the collector) and psi-sheet.mjs (the Sheet builder) are deliberately zero-dep — a round can always be collected and published on a machine where `npm install` never ran. Install these when you want the EVIDENCE chain: `lighthouse` renders the stored median run into the report the Sheet links to (we render a run we already have; we never re-measure the page to produce a picture), and `playwright` turns that report into the full-page PNG.",
+  "name": "pagespeed-report-tools",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "lighthouse": "^12.0.0",
+    "playwright": "^1.44.0"
+  }
+}

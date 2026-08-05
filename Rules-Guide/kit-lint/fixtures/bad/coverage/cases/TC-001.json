@@ -1,0 +1,18 @@
+{
+  "id": "TC-001",
+  "title": "Auth \u2014 happy path",
+  "area": "Auth",
+  "steps": [
+    "open the app",
+    "do the thing"
+  ],
+  "expected": "the thing happened",
+  "oracle": {
+    "type": "spec",
+    "source": "acceptance criteria"
+  },
+  "priority": "High",
+  "traceability": {
+    "strategyUnit": "S1"
+  }
+}

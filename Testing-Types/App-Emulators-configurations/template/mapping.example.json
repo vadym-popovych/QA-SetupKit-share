@@ -1,0 +1,43 @@
+{
+  "$comment": [
+    "Copy to <Project>/Emulator-Testing/mapping.json. This is Layer 3's index: it links each",
+    "checklist row to the flow that exercises it and the screenshot that proves it, plus the",
+    "oracle used to decide the verdict (EMULATOR_RULES §2.3 + Test-Oracles doctrine). `kind`:",
+    "`functional` = decided from the flow result; `visual` = compared to Figma, proposed for",
+    "human confirm. `oracle` mirrors run-result.schema.json's oracle {type, source}."
+  ],
+  "rows": [
+    {
+      "row": "C12",
+      "check": "Onboarding screen opens on first launch",
+      "flow": "flows/smoke-launch.yaml",
+      "screenshot": "runs/<date>/smoke-launch.png",
+      "kind": "functional",
+      "oracle": { "type": "spec", "source": "assertVisible in smoke-launch.yaml reached" }
+    },
+    {
+      "row": "C18",
+      "check": "App shows a graceful state when notifications permission is denied",
+      "flow": "flows/permissions-deny.yaml",
+      "screenshot": "runs/<date>/permissions-deny.png",
+      "kind": "functional",
+      "oracle": { "type": "invariant", "source": "INV-7: denied permission never blocks core flow" }
+    },
+    {
+      "row": "C24",
+      "check": "Cart contents survive background → kill → relaunch",
+      "flow": "flows/lifecycle-background-restore.yaml",
+      "screenshot": "runs/<date>/lifecycle-background-restore.png",
+      "kind": "functional",
+      "oracle": { "type": "invariant", "source": "INV-8: state persists across process death" }
+    },
+    {
+      "row": "E24",
+      "check": "Product detail matches Figma (spacing, price, CTA)",
+      "flow": "flows/deeplink-open.yaml",
+      "screenshot": "runs/<date>/deeplink-open.png",
+      "kind": "visual",
+      "oracle": { "type": "human", "source": "Figma node product/detail — proposed, awaits confirm" }
+    }
+  ]
+}

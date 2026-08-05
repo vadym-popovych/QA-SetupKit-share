@@ -1,0 +1,333 @@
+# QA gates — PR tier (GitHub Actions)
+#
+# PROPOSED ARTEFACT. The QA agent writes this file to <Project>/CI-Integration/proposed/.
+# Installing it (→ .github/workflows/qa-gates.yml) is the REPO OWNER's action — the agent
+# never pushes into the app repository.
+#
+# ─────────────────────────────────────────────────────────────────────────────────────
+# CONFIGURE THESE THREE THINGS BEFORE THE FILE WILL RUN (there is no working default —
+# the paths depend on which topology you install it in; see the kit README):
+#
+#   TOPOLOGY A — this workflow lives in the QA repo (default; needs no write access to the
+#     app repo; CANNOT block a merge, it tests a deployed staging URL):
+#       KIT_DIR: QA-SetupKit
+#       QA_DIR:  <Project>            # e.g. <Project>
+#     and delete the "topology B" checkout step from every job.
+#
+#   TOPOLOGY B — this workflow lives in the APP repo and CAN block a merge. The kit tools
+#     are not in that repo, so every job checks the QA repo out as a second checkout:
+#       KIT_DIR: qa/QA-SetupKit
+#       QA_DIR:  qa/<Project>
+#     and keep the "topology B" checkout step (it needs the QA_REPO_TOKEN secret).
+#
+#   NODE_DIR — the folder that holds the package.json/package-lock.json with playwright +
+#     axe-core (the kit tools' prereq). Usually $QA_DIR. It is NOT the repo root by default.
+# ─────────────────────────────────────────────────────────────────────────────────────
+#
+# Required secrets (Settings → Secrets and variables → Actions):
+#   STAGING_BASE_URL     staging/dev base URL — NEVER production
+#   TEST_USER_EMAIL      dedicated CI test account (Test-Data pool, not a human's)
+#   TEST_USER_PASSWORD   ditto
+#   QA_REPO_TOKEN        topology B only — read access to the QA repo
+# Optional repo variable:
+#   ALLOWED_ENV_REGEX    overrides the staging-URL guard below (default rejects anything
+#                        that doesn't look like staging/dev/test/qa/stg/preview)
+#
+# BRANCH PROTECTION: make **`verdict`** the required check — never the individual gate jobs.
+# GitHub counts a SKIPPED job as a passing required check, so requiring `a11y` directly means
+# a red `preflight` (→ a11y skipped) would let the PR merge green. `verdict` is `if: always()`
+# and re-derives the result, so it cannot be skipped away.
+#
+# HOW THE GATE ACTUALLY GATES: the kit tools (a11y-scan.mjs, visual-diff.mjs) are REPORT
+# PRODUCERS — they exit 0 even when they find violations (they only fail on harness crashes),
+# because triage was always a human job. So the tool step is NOT the gate. `ci-run-result.mjs`
+# is: it reads the tool's report, derives the verdict, writes a schema-valid run-result, and
+# exits 1 (fail) / 3 (blocked). Never "simplify" this by trusting the tool's exit code.
+#
+# Rules that shaped this file (QA-SetupKit/Testing-Planning/CI-Integration/CI_RULES.md):
+#   · no `continue-on-error`, no `|| true` on a gate step — a gate that cannot run is
+#     BLOCKED, not green;
+#   · never re-record goldens in CI (a silent re-baseline is a faked Pass);
+#   · gate tier is free and ≤10 min: no load/stress, no LLM series, no active scans, no prod.
+#
+# Delete every job whose gate has no row in <Project>/CI-Integration/GATES.md — and delete it
+# from `verdict.needs` + REQUIRED_GATES too, or the workflow will not load.
+
+name: QA gates
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: qa-gates-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  KIT_DIR: QA-SetupKit          # ← configure per topology (see header)
+  QA_DIR: <Project>             # ← configure per topology (see header)
+  NODE_DIR: <Project>           # ← folder holding package.json with playwright + axe-core
+  BASE_URL: ${{ secrets.STAGING_BASE_URL }}
+  # Gates listed here BLOCK the merge. Everything else runs, reports, and is allowed to be
+  # red without blocking — the `soaking → required` promotion from GATES.md. Start empty or
+  # with `schemas` only; promote a gate here once it has proven stable.
+  REQUIRED_GATES: 'schemas'
+
+jobs:
+  # Fails loudly when a gate COULD NOT run (missing secret, wrong env, staging down).
+  # Without this, skipped gates look like passing gates — the "fake a Pass" this kit forbids.
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Secrets present and target is a test environment
+        env:
+          ALLOWED: ${{ vars.ALLOWED_ENV_REGEX || '(staging|stg|dev|test|qa|preview|localhost)' }}
+        run: |
+          set -euo pipefail
+          test -n "${BASE_URL:-}" || { echo "::error::STAGING_BASE_URL is not set — gates BLOCKED, not passed"; exit 1; }
+          # Fails CLOSED: an unrecognised host is refused rather than gated against by accident.
+          # Widen it deliberately via the ALLOWED_ENV_REGEX repo variable, never by deleting the check.
+          echo "$BASE_URL" | grep -Eq "$ALLOWED" || {
+            echo "::error::BASE_URL ($BASE_URL) does not match ALLOWED_ENV_REGEX ($ALLOWED) — refusing to gate against it. If this really is your staging host, set the ALLOWED_ENV_REGEX repo variable."; exit 1; }
+      - name: Target is reachable
+        run: curl -fsS --max-time 20 -o /dev/null "$BASE_URL"
+
+  # G-1 · E2E smoke — the P0 slice only (UI-Automation kit).
+  e2e-smoke:
+    needs: preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      # ── topology B only: bring the QA harness in (delete this step in topology A) ──
+      - uses: actions/checkout@v4
+        with:
+          repository: <org>/<qa-repo>
+          path: qa
+          token: ${{ secrets.QA_REPO_TOKEN }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: ${{ env.NODE_DIR }}/package-lock.json
+      - run: npm ci
+        working-directory: ${{ env.NODE_DIR }}
+      - run: npx playwright install --with-deps chromium
+        working-directory: ${{ env.NODE_DIR }}
+      - name: Job start marker            # anything older than this is a STALE report
+        run: echo "JOB_START_MS=$(date +%s000)" >> "$GITHUB_ENV"
+      - name: Run P0 suite
+        working-directory: ${{ env.NODE_DIR }}
+        env:
+          TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+          TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+        run: |
+          set -uo pipefail
+          mkdir -p "$GITHUB_WORKSPACE/artifacts/e2e"
+          # Playwright carries its own exit code, but the emitter must still see the report on
+          # a red suite. So capture the code instead of letting `set -e` end the job — and note
+          # this is NOT `|| true`: nothing is swallowed. A red suite is re-derived from the
+          # report by the emitter (and a crash that produced no report → blocked, not pass).
+          npx playwright test --grep @high --reporter=json > "$GITHUB_WORKSPACE/artifacts/e2e/report.json"
+          echo "playwright exit code: $?"
+      - name: Verdict + run-result        # THIS is the gate: exit 1 = fail, 3 = blocked
+        if: ${{ !cancelled() }}
+        run: |
+          # --expect-min guards against a broken @high tag silently shrinking the slice to
+          # nothing. Set it to the @high count recorded in GATES.md (a run below it is BLOCKED).
+          node "$QA_DIR/CI-Integration/tools/ci-run-result.mjs" \
+            --discipline ui-automation --from artifacts/e2e \
+            --schemas "$KIT_DIR/Rules-Guide/schemas/validate.mjs" \
+            --not-before "$JOB_START_MS" --expect-min 1 \
+            --run-id "ci-${{ github.run_id }}-e2e" --out artifacts/e2e/run-result.json
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with: { name: e2e-smoke, path: artifacts/e2e }
+
+  # G-2 · Accessibility — WCAG 2.2 AA via axe-core (Accessibility-Testing kit).
+  # The scan reports; the emitter gates. By default EVERY confirmed violation fails the gate
+  # (a11y-scan.mjs reports only confirmed violations); narrowing that with --fail-on is an
+  # owner decision that belongs in GATES.md. SCAN-FAILED → blocked, never pass.
+  a11y:
+    needs: preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4          # topology B only
+        with:
+          repository: <org>/<qa-repo>
+          path: qa
+          token: ${{ secrets.QA_REPO_TOKEN }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: ${{ env.NODE_DIR }}/package-lock.json
+      - run: npm ci
+        working-directory: ${{ env.NODE_DIR }}
+      - run: npx playwright install --with-deps chromium
+        working-directory: ${{ env.NODE_DIR }}
+      - name: Clear last run's report      # a stale summary.json must not be scored as this run
+        run: rm -rf "$QA_DIR/Accessibility-Testing/scans"
+      - name: Job start marker
+        run: echo "JOB_START_MS=$(date +%s000)" >> "$GITHUB_ENV"
+      - name: Scan (reports; exits 0 even with violations — NOT the gate)
+        # The project's copy of a11y-scan.mjs must read BASE_URL from env
+        # (`const BASE = process.env.BASE_URL ?? '<staging>'`) — otherwise preflight guards a
+        # URL the scan never visits. The kit template does this; keep it when you fill PAGES.
+        run: node "$QA_DIR/Accessibility-Testing/tools/a11y-scan.mjs"
+      - name: Verdict + run-result
+        if: ${{ !cancelled() }}
+        run: |
+          node "$QA_DIR/CI-Integration/tools/ci-run-result.mjs" \
+            --discipline accessibility --from "$QA_DIR/Accessibility-Testing/scans" \
+            --schemas "$KIT_DIR/Rules-Guide/schemas/validate.mjs" \
+            --not-before "$JOB_START_MS" \
+            --run-id "ci-${{ github.run_id }}-a11y" --out artifacts/a11y/run-result.json
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: a11y
+          path: |
+            artifacts/a11y
+            ${{ env.QA_DIR }}/Accessibility-Testing/scans
+
+  # G-3 · Visual regression — golden-master diff (Visual-Regression-Testing kit).
+  # NO-BASELINE and CAPTURE-FAILED come back as BLOCKED, not pass: no golden = no oracle.
+  # Never "fix" that by letting CI record a baseline — re-baselining is owner-approved and
+  # logged in BASELINES.md.
+  visual:
+    needs: preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4          # topology B only
+        with:
+          repository: <org>/<qa-repo>
+          path: qa
+          token: ${{ secrets.QA_REPO_TOKEN }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: ${{ env.NODE_DIR }}/package-lock.json
+      - run: npm ci
+        working-directory: ${{ env.NODE_DIR }}
+      - run: npx playwright install --with-deps chromium
+        working-directory: ${{ env.NODE_DIR }}
+      - name: Clear last run's report
+        run: rm -f "$QA_DIR/Visual-Regression/report.json"
+      - name: Job start marker
+        run: echo "JOB_START_MS=$(date +%s000)" >> "$GITHUB_ENV"
+      - name: Diff against goldens (reports; exits 0 — NOT the gate)
+        run: node "$QA_DIR/Visual-Regression/tools/visual-diff.mjs"
+      - name: Verdict + run-result
+        if: ${{ !cancelled() }}
+        run: |
+          node "$QA_DIR/CI-Integration/tools/ci-run-result.mjs" \
+            --discipline visual-regression --from "$QA_DIR/Visual-Regression" \
+            --schemas "$KIT_DIR/Rules-Guide/schemas/validate.mjs" \
+            --not-before "$JOB_START_MS" \
+            --run-id "ci-${{ github.run_id }}-visual" --out artifacts/visual/run-result.json
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: visual-diffs
+          path: |
+            artifacts/visual
+            ${{ env.QA_DIR }}/Visual-Regression/diff
+
+  # G-5 · Machine contracts — QA artefacts in the diff must validate (Rules-Guide/schemas).
+  # Only meaningful when the repo CONTAINS QA artefacts (topology A). In topology B the app
+  # repo has none — delete this job there.
+  schemas:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }           # a shallow clone has no merge base — the gate must be able to RUN
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - name: Collect QA artefacts from the diff
+        env:
+          BASE_REF: ${{ github.base_ref }} # empty on workflow_dispatch — via env, never spliced into the shell
+        run: |
+          set -euo pipefail
+          if [ -n "${BASE_REF:-}" ]; then
+            # No `|| true` anywhere here: if we cannot compute the diff, the gate is BLOCKED,
+            # not "no artefacts found, everything is fine".
+            base=$(git merge-base "origin/$BASE_REF" HEAD) || {
+              echo "::error::cannot determine the diff base against origin/$BASE_REF — schemas gate BLOCKED, not passed"; exit 1; }
+            files=$(git diff --name-only --diff-filter=d "$base" HEAD -- '*.json')
+          else
+            files=$(git ls-files -- '*.json')   # manual run: validate the whole tree rather than pretend to pass
+          fi
+          # Only the kit's real artefact homes — not any repo folder that happens to be called
+          # coverage/ (istanbul) or runs/. grep exit 1 = "no matches" (legitimate); exit ≥2 = a
+          # real error and must not be swallowed.
+          # Note `run-result.json$`, not the whole runs/ folder: a run dir also holds
+          # details.json, which is evidence, not a run-result — validating it as one would
+          # fail the gate on a perfectly good artefact.
+          printf '%s\n' "$files" \
+            | { grep -E '(/bugs/|/test-cases/cases/|/runs/.*/run-result\.json$|/Test-Strategy/coverage\.json$)' || [ $? -eq 1 ]; } \
+            > changed.txt
+          echo "matched $(wc -l < changed.txt | tr -d ' ') QA artefact(s)"
+      - name: Validate
+        run: |
+          set -euo pipefail
+          [ -s changed.txt ] || { echo "no QA artefacts in this diff"; exit 0; }
+          while IFS= read -r f; do
+            [ -n "$f" ] || continue
+            case "$f" in
+              */bugs/*)             kind=bug ;;
+              */test-cases/cases/*) kind=test-case ;;
+              */run-result.json)    kind=run-result ;;
+              */coverage.json)      kind=coverage ;;
+              *)                    continue ;;
+            esac
+            echo "validating $f as $kind"
+            node "$KIT_DIR/Rules-Guide/schemas/validate.mjs" "$kind" "$f"
+          done < changed.txt
+
+  # THE required check. Re-derives the outcome so a SKIPPED or CANCELLED gate can never read
+  # as green, and so that only the gates listed in REQUIRED_GATES can block a merge —
+  # `soaking` gates report loudly without blocking (GATES.md promotion rule).
+  verdict:
+    needs: [preflight, e2e-smoke, a11y, visual, schemas]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Compute
+        env:
+          NEEDS: ${{ toJSON(needs) }}      # via env, never spliced into the shell
+          REQUIRED: ${{ env.REQUIRED_GATES }}
+        run: |
+          printf '%s' "$NEEDS" | node -e '
+            const needs = JSON.parse(require("fs").readFileSync(0, "utf8"));
+            const required = (process.env.REQUIRED || "").split(",").map(s => s.trim()).filter(Boolean);
+            let blocking = [];
+            let soakingRed = [];
+            for (const [job, v] of Object.entries(needs)) {
+              const ok = v.result === "success";
+              console.log(`${ok ? "PASS" : v.result.toUpperCase()}  ${job}${required.includes(job) || job === "preflight" ? "  [required]" : "  [soaking]"}`);
+              if (ok) continue;
+              // preflight is always blocking: if it is red, no gate below it actually ran,
+              // and "did not run" is never a pass.
+              if (job === "preflight" || required.includes(job)) blocking.push(`${job}=${v.result}`);
+              else soakingRed.push(`${job}=${v.result}`);
+            }
+            if (soakingRed.length) console.log(`\nnot blocking (soaking): ${soakingRed.join(", ")} — promote a gate in REQUIRED_GATES once it is stable`);
+            if (blocking.length) {
+              console.log(`\nBLOCKING: ${blocking.join(", ")}`);
+              console.log("A gate that did not run is BLOCKED, not passed.");
+              process.exit(1);
+            }
+            console.log("\nall required gates green");
+          '

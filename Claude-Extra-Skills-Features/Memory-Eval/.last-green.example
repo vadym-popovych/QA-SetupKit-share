@@ -1,0 +1,51 @@
+# .last-green — the format ONLY. Copy the SHAPE, never the contents.
+#
+# Your real `.last-green` sits next to eval-gate.sh and is written BY HAND after your own
+# first green run (SETUP step 6). It is local state: gitignore it, never commit it, never
+# ship it. `.warned/` beside it holds live chat session ids — same treatment.
+#
+# ── THE LINE ──────────────────────────────────────────────────────────────────────────
+# The gate reads line 1 only, and splits it on whitespace into exactly three fields:
+#
+#   <sha256-of-EVAL_TARGET>  <score>  <YYYY-MM-DD>
+#
+#   field 1  sha256 of the memory file you measured — the file EVAL_GATE_TARGET points at.
+#            Get it the same way the gate does:
+#              shasum -a 256 "$EVAL_TARGET" | awk '{print $1}'      # macOS/BSD
+#              sha256sum "$EVAL_TARGET" | awk '{print $1}'          # Linux
+#   field 2  the score, as ONE token with NO SPACES — fields are whitespace-split, so a
+#            space inside the score silently truncates it and the date lands in field 4
+#            where nothing reads it. Glue the pinned conditions on with @ / ( ) instead.
+#   field 3  the date of the run, YYYY-MM-DD.
+#
+# ⚠️ COMMENTS ARE FOR THIS `.example` FILE ONLY. The gate does not strip them: if you copy
+#    this file to `.last-green` as-is, line 1 is a comment, field 1 becomes "#", it matches
+#    no hash, and the gate warns on every prompt in every chat until you notice. The real
+#    file is ONE line, no comments, no blank first line.
+#
+# ── WHAT THE LINE MUST NOT BE ─────────────────────────────────────────────────────────
+# * NEVER someone else's line. A foreign hash can never match your file, so the gate cries
+#   wolf forever; make it match and it goes silent on YOUR drift instead. That is why this
+#   file ships a placeholder and not a working baseline (RULES §8).
+# * NEVER an unpinned run. Agents that inherited the launching chat's effort produce a
+#   number comparable to nothing — recording it launders an unknown condition into a
+#   target. Such a score is `not-run` for baseline purposes, however green it looked, and
+#   it is NEVER recorded (RULES §2) — SETUP step 6 is absolute on this. There is no
+#   `-inherited` escape hatch: a run you cannot pin is a run you do not baseline.
+# * NEVER a run you edited the memory file to green. That is a fabricated Pass at the
+#   instrument level (RULES §4).
+#
+# ── EXAMPLE (placeholder hash — replace ALL THREE fields with your own run) ────────────
+# The score token below carries the pinned efforts and the run-id, so the baseline points
+# at the result file where the full conditions live (model, scenario-set id + count,
+# per-scenario verdict — RULES §2). Adopt any convention you like, as long as it stays one
+# token and a reader can recover the conditions from it.
+#
+#   0000000000000000000000000000000000000000000000000000000000000000 6/6@medium/medium(run:2026-01-14-post-rebuild) 2026-01-14
+#
+# Then verify before wiring the hook — a gate that fails silent at run time must be made to
+# fail loud at install time:
+#
+#   EVAL_GATE_TARGET="$EVAL_TARGET" ./eval-gate.sh
+#
+# Unchanged file → silence. Changed file → one warning, once per (session, hash).

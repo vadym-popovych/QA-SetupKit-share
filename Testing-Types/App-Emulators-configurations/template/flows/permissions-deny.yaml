@@ -1,0 +1,16 @@
+# Layer 2 · the DENY path — the common bug source the happy path never covers.
+# Launch with every permission denied and assert the app degrades gracefully
+# (no crash, no dead-end, a re-request affordance) rather than white-screening.
+# Maestro grants/denies OS permissions at launch on BOTH platforms via `permissions`.
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+    permissions:
+      all: deny               # notifications, camera, location, contacts … all denied
+- assertVisible: "Get started" # TODO: app still reaches its entry screen (does NOT hang on a prompt)
+- takeScreenshot: permissions-deny
+# TODO: if the app has a feature gated on a permission (e.g. camera scan), navigate to it and
+#       assert the graceful "enable in Settings" affordance instead of a crash:
+# - tapOn: "Scan"
+# - assertVisible: "Enable camera access in Settings"

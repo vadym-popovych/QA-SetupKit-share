@@ -1,0 +1,18 @@
+{
+  "id": "TC-002",
+  "title": "Orders \u2014 happy path",
+  "area": "Orders",
+  "steps": [
+    "open the app",
+    "do the thing"
+  ],
+  "expected": "the thing happened",
+  "oracle": {
+    "type": "spec",
+    "source": "acceptance criteria"
+  },
+  "priority": "High",
+  "traceability": {
+    "strategyUnit": "E1"
+  }
+}
