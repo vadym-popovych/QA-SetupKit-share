@@ -14,7 +14,7 @@ kit turns them into the answers owners actually ask: *"how is quality trending?"
 
 | Metric | Formula (source) | Decision it informs |
 |---|---|---|
-| Open bugs by severity | count `Bug Reports` rows, `status: open`, per severity | release gate (exit criteria) |
+| Open bugs by severity | count rows with `status: open`/`reopened`, per severity — from EITHER bug source (a Bug-Summary record via `BUG_SUMMARY`, or a `Bug Reports` tab via `QA_SHEET_ID`; the output names which) | release gate (exit criteria) |
 | Bug inflow vs outflow | filed vs fixed+verified per round (bug rows) | is the build stabilizing? |
 | Coverage vs strategy | `covered / total units`, weighted by risk (coverage.json) | where to spend the next round |
 | Gap count (risk ≥ 7) | `gaps[]` length (coverage.json) | escalation list size — must trend to 0 |

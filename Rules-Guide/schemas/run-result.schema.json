@@ -60,7 +60,7 @@
     },
     "metrics": {
       "type": "object",
-      "$comment": "discipline-specific: k6 percentiles, checks passed/failed, pages statused…",
+      "$comment": "discipline-specific: k6 percentiles, checks passed/failed, pages statused… CONTRACT (not machine-enforceable here — JSON Schema cannot count another property's members): when results[] is present, any per-case tally in this block MUST agree with it. results[] is the RECORD (it names case ids); this block is a PROJECTION of it. On disagreement the record wins and this block is recomputed — never the other way round, or a hand-typed summary silently outranks the enumerated evidence.",
       "additionalProperties": {
         "type": [
           "number",
@@ -153,8 +153,10 @@
             "enum": [
               "pass",
               "fail",
-              "skipped"
-            ]
+              "skipped",
+              "blocked"
+            ],
+            "$comment": "'blocked' and 'skipped' are DIFFERENT and both are needed — same distinction the Test-Cases Sheet makes. skipped = will not be run (a decision); blocked = could not be run and the debt REMAINS (environment, missing account, no credits). Added 14/08/2026: the enum previously stopped at 'skipped', so a run with blocked cases had nowhere truthful to put them. Found on a real API-smoke run whose two credit-blocked cases were recorded as 'skipped' in results[] and as 'blocked: 2' in the free-form metrics block — the two halves of one artefact disagreed, and both validated. A vocabulary gap does not stay a vocabulary gap; it becomes a wrong number."
           },
           "oracle": {
             "type": "object",

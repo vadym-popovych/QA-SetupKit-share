@@ -2,6 +2,10 @@
 // Web-Testing kit — capture & machine checks (v2, lessons from <Project> landing round 1).
 // Usage: PLAYWRIGHT_DIR=<scratchpad> node capture.mjs --out=runs/<date>-<slug>
 //        [--browsers=chromium,firefox,webkit] [--url=<override>]
+//        [--pages=home,about] [--viewports=390x844,1440x900]
+// Multi-page: cfg.pages = [["home","/"],["about","/about"], ...] (default: one page at baseUrl).
+// --pages filters that list by name; --viewports narrows the sweep (a routine second run over the
+// remaining pages costs pages x viewports x engines, so the filters are how a round stays finite).
 // Reads ../config.json (copy of config.template.json). Playwright resolved from
 // PLAYWRIGHT_DIR (dir containing node_modules/playwright) or the script's own dir.
 //
@@ -44,8 +48,24 @@ const pwDir = process.env.PLAYWRIGHT_DIR || __dirname;
 const pw = await import(pathToFileURL(join(pwDir, 'node_modules', 'playwright', 'index.mjs')).href);
 
 const BROWSERS = (args.browsers || 'chromium,firefox,webkit').split(',');
-const ALL_VPS = [...cfg.viewports.mobile, ...cfg.viewports.tablet, ...cfg.viewports.desktop, ...cfg.viewports.large];
-const SMOKE_VPS = cfg.smokeViewports || [[390, 844], [768, 1024], [1440, 900], [1920, 1080]];
+let ALL_VPS = [...cfg.viewports.mobile, ...cfg.viewports.tablet, ...cfg.viewports.desktop, ...cfg.viewports.large];
+let SMOKE_VPS = cfg.smokeViewports || [[390, 844], [768, 1024], [1440, 900], [1920, 1080]];
+if (args.viewports) {
+  const wanted = args.viewports.split(',').map(s => s.trim());
+  const keep = vps => vps.filter(([w, h]) => wanted.includes(`${w}x${h}`));
+  ALL_VPS = keep(ALL_VPS); SMOKE_VPS = keep(SMOKE_VPS);
+  const unknown = wanted.filter(v => ![...ALL_VPS, ...SMOKE_VPS].some(([w, h]) => `${w}x${h}` === v));
+  if (unknown.length) { console.error(`capture: --viewports names ${unknown.join(', ')}, absent from config.json — a width nothing ran is not coverage.`); process.exit(2); }
+}
+// pages: [[name, path], ...]. A single-page target keeps working with no `pages` block at all.
+let PAGES = Array.isArray(cfg.pages) && cfg.pages.length ? cfg.pages : [['home', '/']];
+if (args.pages) {
+  const wanted = args.pages.split(',').map(s => s.trim());
+  PAGES = PAGES.filter(([name]) => wanted.includes(name));
+  const unknown = wanted.filter(n => !PAGES.some(([name]) => name === n));
+  if (unknown.length) { console.error(`capture: --pages names ${unknown.join(', ')}, absent from config.json pages`); process.exit(2); }
+}
+const pageUrl = path => args.url ? args.url : new URL(path, BASE_URL).href;
 const REVEAL = cfg.revealSelector || '[data-reveal]';
 const REVEAL_CLASS = cfg.revealVisibleClass || 'is-visible';
 
@@ -58,9 +78,11 @@ const startedAt = Date.now();
 for (const browserName of BROWSERS) {
   const vps = browserName === 'chromium' ? ALL_VPS : SMOKE_VPS;
   const browser = await pw[browserName].launch();
+  for (const [pageName, pagePath] of PAGES) {
+  const url = pageUrl(pagePath);
   for (const [w, h] of vps) {
-    const tag = `${browserName}_${w}x${h}`;
-    const r = { browser: browserName, viewport: `${w}x${h}`, consoleErrors: [], pageErrors: [], failedRequests: [], warnings: [] };
+    const tag = `${pageName}_${browserName}_${w}x${h}`;
+    const r = { page: pageName, url, browser: browserName, viewport: `${w}x${h}`, consoleErrors: [], pageErrors: [], failedRequests: [], warnings: [] };
     // Phone widths get REAL device emulation (mobile UA + touch), not a bare viewport:
     // UA-driven UI (platform store badges, app banners) renders differently on real
     // devices — bare-viewport findings at mobile widths are false positives until
@@ -74,6 +96,12 @@ for (const browserName of BROWSERS) {
       if (browserName === 'firefox') delete ctxOpts.isMobile;
       r.emulation = browserName === 'webkit' ? 'iPhone 14 (iOS UA)' : 'Pixel 7 (Android UA)';
     }
+    // A stalled combo and a slow one look identical from the outside, so each combo
+    // announces itself and each step stamps its elapsed seconds: a run that hangs names
+    // the step it hung on instead of leaving the reader to guess (14/08/2026).
+    const t0 = Date.now();
+    const step = s => console.log(`  · ${tag} ${s} @${Math.round((Date.now() - t0) / 1000)}s`);
+    console.log(`start ${tag}`);
     const ctx = await browser.newContext(ctxOpts);
     const page = await ctx.newPage();
     page.on('console', m => { if (m.type() === 'error') r.consoleErrors.push(m.text().slice(0, 300)); });
@@ -82,11 +110,19 @@ for (const browserName of BROWSERS) {
     page.on('requestfailed', req => r.failedRequests.push(`FAILED ${req.failure()?.errorText} ${req.url().slice(0, 200)}`));
 
     try {
-      await page.goto(BASE_URL, { waitUntil: 'networkidle', timeout: 60000 });
+      // networkidle as a goto condition is a trap: a page with a poll, a websocket or an
+      // ad/analytics beacon never reaches it, and the whole run stalls on one combo. Load
+      // first, then WAIT for idle with its own short budget and record the miss as a warning.
+      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
+      step('loaded');
+      await page.waitForLoadState('networkidle', { timeout: 20000 })
+        .catch(() => r.warnings.push('networkidle not reached within 20s — page keeps requesting'));
+      step('idle-or-timeout');
       await page.waitForTimeout(1200);
       r.title = await page.title();
 
-      await page.screenshot({ path: join(OUT, 'shots', `${tag}_0-hero.png`) });
+      await page.screenshot({ path: join(OUT, 'shots', `${tag}_0-hero.png`), timeout: 20000 });
+      step('hero-shot');
 
       // horizontal overflow + offenders (non-fixed elements)
       r.overflow = await page.evaluate(() => {
@@ -134,6 +170,7 @@ for (const browserName of BROWSERS) {
         return out;
       });
 
+      step('overflow+fixed-clip');
       // slow scroll to bottom (trigger IntersectionObserver reveals)
       await page.evaluate(async () => {
         const de = document.documentElement;
@@ -146,6 +183,7 @@ for (const browserName of BROWSERS) {
         await new Promise(res => setTimeout(res, 500));
       });
 
+      step('scrolled');
       // reveal completeness — hidden-aware
       r.reveals = await page.evaluate(({ REVEAL, REVEAL_CLASS }) => {
         const all = [...document.querySelectorAll(REVEAL)];
@@ -203,26 +241,42 @@ for (const browserName of BROWSERS) {
         if (await acc.count()) {
           await acc.scrollIntoViewIfNeeded();
           await page.waitForTimeout(700);
+          // The oracle is TOGGLING, not "ends up open": headless UI kits put the state on the
+          // TRIGGER (`aria-expanded`) or on the item as `data-state`, never as `.open` unless it is
+          // a real <details> — and an item that ships open would read "broken" the moment a click
+          // closed it. Read all three, before and after, and judge the transition (14/08/2026).
+          const readState = () => acc.evaluate(el => {
+            const t = el.querySelector('summary, [role="button"], button');
+            if (typeof el.open === 'boolean') return el.open;
+            return el.getAttribute('data-state') === 'open'
+              || el.getAttribute('aria-expanded') === 'true'
+              || t?.getAttribute('aria-expanded') === 'true';
+          });
+          const before = await readState();
           await acc.locator('summary, [role="button"], button').first().click();
           await page.waitForTimeout(500);
-          r.accordionOpens = await acc.evaluate(el => el.open ?? el.getAttribute('aria-expanded') === 'true');
+          const after = await readState();
+          r.accordion = { before, after, toggles: before !== after };
           await page.screenshot({ path: join(OUT, 'shots', `${tag}_accordion-open.png`) });
         }
       }
 
+      step('animations+accordion');
       // per-section shots
       for (const [name, sel] of (cfg.sections || [])) {
         const loc = page.locator(sel).first();
         if (await loc.count()) {
           await loc.scrollIntoViewIfNeeded().catch(() => {});
           await page.waitForTimeout(750);
-          await loc.screenshot({ path: join(OUT, 'shots', `${tag}_sec-${name}.png`), animations: 'disabled' }).catch(e => r.warnings.push(`shot ${name}: ${String(e).slice(0, 120)}`));
+          await loc.screenshot({ path: join(OUT, 'shots', `${tag}_sec-${name}.png`), animations: 'disabled', timeout: 20000 }).catch(e => r.warnings.push(`shot ${name}: ${String(e).slice(0, 120)}`));
         } else r.warnings.push(`section not found: ${sel}`);
       }
+      step('section-shots');
 
       await page.evaluate(() => window.scrollTo(0, 0));
       await page.waitForTimeout(400);
-      await page.screenshot({ path: join(OUT, 'shots', `${tag}_full.png`), fullPage: true, animations: 'disabled' }).catch(e => r.warnings.push(`fullpage: ${String(e).slice(0, 120)}`));
+      await page.screenshot({ path: join(OUT, 'shots', `${tag}_full.png`), fullPage: true, animations: 'disabled', timeout: 30000 }).catch(e => r.warnings.push(`fullpage: ${String(e).slice(0, 120)}`));
+      step('fullpage-shot');
 
       // anchors + placeholder-link audit
       r.links = await page.evaluate(() => {
@@ -247,6 +301,7 @@ for (const browserName of BROWSERS) {
     results.push(r);
     console.log(`done ${tag}${r.fatal ? ' FATAL: ' + r.fatal : ''}`);
   }
+  }
   await browser.close();
 }
 
@@ -259,10 +314,10 @@ for (const r of results) {
   if (r.reveals?.stuck?.length) flags.push(`STUCK-REVEALS ${r.reveals.stuck.length}`);
   if (r.consoleErrors?.length) flags.push(`CONSOLE-ERR ${r.consoleErrors.length}`);
   if (r.failedRequests?.length) flags.push(`REQ-FAIL ${r.failedRequests.length}`);
-  if (r.accordionOpens === false) flags.push('ACCORDION-BROKEN');
+  if (r.accordion && r.accordion.toggles === false) flags.push(`ACCORDION-NO-TOGGLE (${r.accordion.before}→${r.accordion.after})`);
   if (r.links?.placeholders?.length) flags.push(`PLACEHOLDER-LINKS ${r.links.placeholders.length}`);
   if (r.links?.deadSpans?.length) flags.push(`DEAD-SPAN-LINKS ${r.links.deadSpans.length}`);
-  console.log(`${r.browser} ${r.viewport}: ${flags.length ? flags.join(' | ') : 'clean'}`);
+  console.log(`${r.page} ${r.browser} ${r.viewport}: ${flags.length ? flags.join(' | ') : 'clean'}`);
 }
 const elapsedS = Math.round((Date.now() - startedAt) / 1000);
 console.log(`captured ${results.length} combo(s) in ${Math.floor(elapsedS / 60)}m ${String(elapsedS % 60).padStart(2, '0')}s`);

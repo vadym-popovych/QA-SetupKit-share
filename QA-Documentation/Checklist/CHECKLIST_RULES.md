@@ -36,6 +36,32 @@ teammate who takes only this file still tests honestly:
 - **Escalate, don't decide.** Statuses are written to the Sheet only after the round is reported
   and the owner confirms; a "ready to ship" call is the owner's. Client repos stay read-only.
 
+### Writing a round's statuses — from a MAP, never by hand (added 22/09/2026)
+
+[`tools/checklist-status.mjs`](tools/checklist-status.mjs) writes a round's verdicts into an
+existing checklist Sheet:
+
+```
+SSID=<spreadsheetId> node tools/checklist-status.mjs dump            # row-numbered TSV of the tab
+SSID=<spreadsheetId> node tools/checklist-status.mjs write <map.json>
+```
+
+`map.json` is `{"<row>": ["<status>", "<comment>"]}` and **it is the artefact, not the Sheet.**
+Why it exists: a round produces ~200 verdicts, and hand-typing them into a grid loses the
+derivation — nobody can later ask *why is row 137 Failed*. Keep the map in the project
+(`<Project>/QA-Documentation/checklist/`), correct a verdict THERE, re-run `write`, and the Sheet
+follows. Read the grid with `dump` first: every verdict is then pinned to a row NUMBER instead of
+being counted by eye down a column.
+
+The tool enforces the doctrine above mechanically and **fails closed, writing nothing**, when:
+- a status is outside `Passed / Failed / Skipped / ""` — in particular **`Partial` is refused**,
+  because it is a COMPUTED value of the result column, never a typed one;
+- a row is `Skipped` **without a reason comment** — the reason is mandatory, so the check is too.
+
+Rows absent from the map are left untouched, so writing one platform's round cannot overwrite
+another platform's filled block. It needs no project defaults: without `SSID` it refuses to guess
+which checklist it is writing to.
+
 ## Look in Google Drive first for checklists/docs (Vadym, 22/06/2026)
 When you need an existing checklist, spec, or any document the user references, FIRST try to find it in the user's Google Drive (search via the `google-sheets`/Drive MCP by name — e.g. the project name). Only if you can't locate it there, ask the user for the link. Don't immediately ask for a URL when a Drive search would find it.
 

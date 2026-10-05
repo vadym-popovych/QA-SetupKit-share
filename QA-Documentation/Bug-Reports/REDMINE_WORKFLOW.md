@@ -20,6 +20,13 @@ while the internal QA Sheet stays the round journal. Established on the the team
   `GET /users/current.json`, `/projects.json`, `/trackers.json`, `/issue_statuses.json`,
   `/enumerations/issue_priorities.json`, `/projects/<id>/versions.json`, `/memberships.json`,
   plus ONE sample bug of the team (`GET /issues/<id>.json`) to copy the house format.
+- **A NEW project (or a subproject) → LOOK FOR IT ON THE BOARD FIRST, before asking the owner
+  where its bugs go** (owner's instruction, 15/08/2026). Search `GET /projects.json?limit=100`
+  by name AND by the slugified name, and try `GET /projects/<slug>.json` directly; a hit answers
+  in one call what the board is, whether it is a **subproject** (`parent`), which trackers exist,
+  who the members and their roles are, and **how many issues are already filed** — the last one
+  is the dedup baseline, and filing without it is how a duplicate gets created on day one. Only
+  when the search genuinely finds nothing is "where do bugs go?" a question worth the owner's time.
 
 ## Tool
 - Reference implementation: `template/tools/redmine-bug.mjs`
@@ -36,6 +43,20 @@ while the internal QA Sheet stays the round journal. Established on the the team
   truth. Rows upsert by the id in column A (re-running updates in place, never duplicates); a
   placeholder evidence url renders as a bold label, never a broken link. Example specs
   (App + BE) ship as `template/bug-spec.example.json` and `template/bug-spec-backend.example.json`.
+
+- **Bug evidence has ONE host — the file-hosting one (`MCP-configurations/mega/mega-upload.sh
+  --evidence <Project> <file>`), never the document Drive** (owner's correction, 15/08/2026).
+  This holds for **every** surface: the tracker ticket AND the internal review sheet cite the same
+  link. The document Drive is for documents — checklists, reports, the candidates sheet itself —
+  not for screenshots and screen recordings. Uploading evidence "just for the internal doc" into
+  Drive splits one bug's evidence across two hosts, and the ticket then cites a link the reader
+  cannot open. `--evidence` also owns the layout and the naming
+  (`/Attachments/<Project>/<Screenshots|Screen records>/<dd.mm.yyyy>/`) — do not hand-roll it.
+- **A bug's screenshot is an ANNOTATED copy, not a raw capture:** frame the defect
+  (`Testing-Types/App-Emulators-configurations/template/tools/annotate.py`, red = actual /
+  green = expected). Take the frame coordinates from the DOM — locate the element, read its
+  bounding box, then draw — never by eyeballing pixels off a screenshot: a box drawn by hand is
+  wrong the next time the layout shifts, and it cannot be re-generated.
 
 ## Filing rules (Vadym, 11/07/2026)
 - **Status:** bug reports are created as **To do**; **Backlog** only for very minor
@@ -77,6 +98,14 @@ while the internal QA Sheet stays the round journal. Established on the the team
   - For backend bugs include debug IDs (user uid, entity ids) in Preconditions/Notes,
     and write the API-perspective variant: steps = the exact GET/POST calls.
   - NO internal cross-references ("Tracked as BUG-NNN in the QA Sheet") in the ticket.
+- **Bold the values that let the assignee repro on sight (Vadym, 29/08/2026) — EVERY bug,
+  every layer, not just BE:** Textile `*...*` around any important data or id wherever it
+  appears in the description — credentials, uids, entity/booking/order ids, error codes,
+  build/version numbers, a specific field value, a screen name the dev must navigate to.
+  The assignee's eye should land on the exact string to act on, not have to parse it out of
+  a sentence. By analogy: every such value gets the same treatment, not just the first one
+  in the ticket — App/FE bugs bold their screen names and field values the same way BE bugs
+  bold their uids and entity ids.
 - **Screenshots:** evidence files live on the file host (Mega
   `Attachments/<Project>/<Screenshots|Screen records>/<dd.mm.yyyy>/`), the ticket gets
   ONLY the links — each as its own bold-label paragraph, blank line between:
@@ -131,15 +160,56 @@ while the internal QA Sheet stays the round journal. Established on the the team
 - **Bug-candidates funnel (Vadym, 11/07/2026):** every bug the agent FINDS goes first
   into a separate **«<Project> — Bug candidates»** spreadsheet (project name IN the
   file name — same pattern for every project) in the project's Drive folder
-  (columns mirror the Bug Reports v2 tab: `Summary · Bug report · Comments · Verdict`,
+  (columns: `Summary · Bug report · AI Comments · Verdict · Owner's Comments` — D and E are the owner's, never overwritten by a rerun,
   Verdict dropdown `Proposed/Approved/Rejected`). After each test run the agent
   PROPOSES the new candidates to the owner for validation; on approval the bug is
   filed to the board (team format) and its row is DELETED from the candidates doc;
-  **rejected candidates are DELETED as well** (Vadym, 12/07/2026) — the doc holds only
-  pending items, no history. Candidates are drafts — never treated as filed bugs in
-  reports/metrics.
+  **rejected candidates MOVE to a `Rejected Bugs` tab of the same file** (owner decision,
+  29/09/2026 — replaces the 12/07 "delete" rule: the owner's reason in `Owner's Comments`
+  is worth keeping). `bug-row.mjs --candidates` does the move on every run (whole row,
+  formatting and links; fixed gid 900002) and never re-appends a rejected spec. The funnel
+  tab holds only pending items. **Before filing an `Approved` row, read the tool's
+  `needsOwner`:** a row whose latest re-check no longer reproduces (amber ⚠ in AI Comments) is
+  asked about on its own, never filed inside a batch «post» (BUG_REPORTS_RULES, candidates
+  sheet). Candidates are drafts — never treated as filed bugs in reports/metrics.
 **Two destinations, two hosts:** the team board gets file-host links only; the internal QA Sheet keeps
 its Drive links. Do not mix them — a board link must open for someone with no access to our Drive.
+
+## Filing in the checklist format (owner, 30/09/2026)
+
+Often the team does not want one ticket per bug: **one task is opened and the bugs are added to it
+as numbered checklist items** (shape 1 below). Rules for filing that way:
+
+- **Line format** — one item per bug, exactly:
+  `N. *[<App | BE | App/BE> - <Story x.y or the broken area>]* <summary> *Screenshot:* <url>`
+  (`*Screen record:*` when the primary evidence is a video). The summary is English and answers
+  What? Where? When?; `App/BE` whenever the side is not certain. The candidates sheet's
+  `Board checklist` tab produces these lines ready to paste (BUG_REPORTS_RULES).
+- **How the points are split is a TEAM decision, not ours** — one container per side
+  (`[BUGS - App]`, `[BUGS - BE]`) or one mixed container (`[BUGS - App + BE] Issues faced during
+  <dates>`) both happen, depending on what was agreed. **Ask the owner before the first filing on a
+  project, and again whenever a new container is about to be opened**; record the answer in
+  `<Project>/CLAUDE.md`, never assume last project's split.
+- **Numbering continues** the container's existing points; never renumber what is already there —
+  developers, journals and chats refer to points by number.
+- **Before proposing a filing, match every open candidate against the points already in the
+  container** (`GET /issues/<id>/checklists.json`, read-only) and record the result in the spec:
+  `onBoard` = the defect is already a point (name it: `"#<task> point 15"`), `boardOverlap` = a point
+  covers part of it (name what is and is not covered). Only candidates with neither go to the
+  paste-ready list; the overlap ones are narrowed to the uncovered part first. AI Comments show the
+  status on every row, so the owner sees what he already filed and what he has not.
+- **The container's journal is the re-check record:** the owner writes which points still reproduce
+  on which build, developers tick points done, and a point that reproduces again is unticked. Read it
+  (`include=journals`) before any re-check and cite it in a spec's `recheck`.
+- Adding items through the API (`POST /issues/<id>/checklists.json` with
+  `{"checklist":{"subject":"…","is_done":false}}` → 201) is a board write: only on the owner's
+  explicit «post», like any other filing. Re-read the list right before posting and number from its
+  real last point, then read it back.
+- **A comment (journal) cannot be edited or deleted through the API** (measured: `PUT`/`PATCH`/
+  `DELETE /journals/<id>.json` → 404, even for the comment's own author). When the owner's
+  running list (e.g. «Left Points») must grow, either he edits it in the browser, or the agent
+  posts a NEW comment with the full updated text (`PUT /issues/<id>.json` with `notes`) and asks
+  him to delete the old one — never leave two live versions without saying which one counts.
 
 ## Where the bugs actually are on this board (measured 14/07/2026, read-only)
 

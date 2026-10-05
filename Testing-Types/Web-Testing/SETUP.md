@@ -69,4 +69,8 @@ PLACEHOLDER-LINKS per combo.
 - Findings → the project's **bug-candidates funnel** (draft doc first, owner validates,
   then the board). Annotated evidence (red = actual, green = expected) via
   `Testing-Types/App-Emulators-configurations/template/tools/annotate.py`; upload per the project's evidence channel.
+- A finding **about requests** gets a screen record with the requests opened, not a screenshot of
+  the request list — `template/tools/record-network-bug.mjs` (RULES rule 12); a gesture finding gets
+  one shot with `template/tools/touch-indicator.js` (rule 11). Both record real DevTools/pages with
+  no screen-recording permission involved.
 - End the round report with a LINKS section (candidates doc, evidence, REPORT.md path).

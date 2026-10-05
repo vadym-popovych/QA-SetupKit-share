@@ -28,6 +28,7 @@ which maestro          # Layer 2 driver — required for every platform
 java -version          # Maestro (JVM) AND Android Gradle need a JDK 11+
 which node             # runner parses config.json via node (18+)
 python3 -c 'import PIL' # bug-evidence tools (annotate.py / collage.py) need Pillow
+echo "PLAYWRIGHT_DIR=${PLAYWRIGHT_DIR:-UNSET}"  # design-rect.mjs (design side of a collage) — optional, only with an HTML design export
 xcodebuild -version    # iOS builds
 xcrun simctl list devices available | grep -i iphone   # iOS simulators
 which adb              # Android builds
@@ -97,6 +98,24 @@ path (e.g. `DejaVuSans.ttf`) to the `font()` candidate list in `tools/annotate.p
   device that appears in `xcrun simctl list devices available` (the examples' "iPhone 16 Pro"
   is just one option — pick a device you actually have).
 - Build for a simulator destination with `xcodebuild`, then `simctl boot/install/launch`.
+- **After a macOS / Xcode major upgrade (measured on macOS 27 + Xcode 27, 25–30/09/2026)** —
+  expect these before anything builds:
+  - `sudo xcodebuild -license accept` (git itself fails until it is done — owner's step, needs a password);
+  - Xcode's first-launch components (CoreSimulator / CoreDevice): until installed, xcodebuild
+    reports "CoreSimulator is out of date" and devices are invisible — opening Xcode once or
+    `xcodebuild -runFirstLaunch` installs them;
+  - a Flutter project with CocoaPods fails with "IPHONEOS_DEPLOYMENT_TARGET 13.0 … supported
+    15.0 to 27.0" — in the SNAPSHOT's Podfile `post_install`, set every pod target to 15.0;
+  - `generic/platform=iOS Simulator` fails ("Flutter.framework does not contain arm64 x86_64")
+    — build for a concrete simulator with `ARCHS=arm64 ONLY_ACTIVE_ARCH=YES`;
+  - an Intel-only tool (e.g. an older Charles) needs Rosetta:
+    `softwareupdate --install-rosetta --agree-to-license`.
+- **"No internet" on the Mac right after a proxy tool died** (Software Update says "check your
+  connection"): the tool left the SYSTEM proxy pointing at its dead port. Check
+  `scutil --proxy`; turn it off per service with
+  `networksetup -setwebproxystate <service> off` and `-setsecurewebproxystate <service> off`.
+- **Optional — request timelines:** `brew install mitmproxy` (for `net-timeline-addon.py`,
+  EMULATOR_RULES §5.1). Nothing else in the kit needs it.
 
 ## Android (Layer 1) — when you start testing Android
 

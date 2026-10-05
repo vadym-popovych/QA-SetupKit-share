@@ -19,9 +19,10 @@
 - **Destination is the owner's call:** before filing the FIRST bug of a project, ASK
   where bugs go — the QA Sheet or the team's tracker (Redmine). **Bug-candidates
   funnel:** agent-found bugs go first into a «Bug candidates» spreadsheet in the
-  project's Drive folder (Summary · Bug report · Comments · Verdict); after each run
+  project's Drive folder (Summary · Bug report · AI Comments · Verdict · Owner's Comments — D and E are the owner's, never overwritten); after each run
   propose them to the owner; on approval file to the board and delete the candidate
-  row; owner-rejected candidates are deleted immediately too — the doc holds only
+  row; owner-rejected candidates move to the file's «Rejected Bugs» tab (the tool does
+  it on every run, the owner's comments travel with the row) — the funnel tab holds only
   pending items.
 - **External tracker (Redmine):** when the team runs a Redmine board, file bugs there
   in the TEAM's format via the REST API (`X-Redmine-API-Key`; tool pattern

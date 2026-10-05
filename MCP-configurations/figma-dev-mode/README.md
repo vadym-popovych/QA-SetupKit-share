@@ -71,3 +71,28 @@ The JSON snippet is **safe to share** — no secrets, no machine-specific paths.
 1. Have Figma Desktop with a Dev / Full seat.
 2. Enable the MCP toggle in Figma (one-time, per machine).
 3. Approve the project-scoped MCP on first launch of Claude Code in the cloned workspace.
+
+## Getting the fileKey when nobody hands you the URL (17/08/2026)
+
+The Dev Mode MCP answers in **node-ids only** — `get_metadata`, `get_design_context` and
+`get_screenshot` never return the file's URL or key, and its asset server on `localhost:3845` serves
+individual assets but exposes no discovery endpoint. So the moment you need the REST API (exporting
+frames as PNG — see `Testing-Types/Web-Testing/template/tools/figma-export.mjs`) you are missing the
+one value the MCP will not give you.
+
+It is recoverable locally, without asking the owner: the desktop app's profile cache remembers the
+files it has opened.
+
+```bash
+cd ~/Library/Application\ Support/Figma/DesktopProfile
+grep -rao "design/[A-Za-z0-9]\{18,26\}" . | sed 's/.*design\///' | sort -u
+```
+
+Each hit is a `fileKey` — the segment after `/design/` in a file URL. Verify the one you want with
+`GET https://api.figma.com/v1/files/<key>?depth=1` before trusting it, and persist it in the
+project's `Web-Testing/config.json` so this is a one-time cost.
+
+⚠️ **`timeout` does not exist on stock macOS.** A search written as `timeout 60 grep …` fails with
+"command not found" and prints nothing — which reads exactly like "not found" and will have you
+reporting a dead end that was never searched. This happened on the run that produced this note; use
+the Bash tool's own timeout instead, or `gtimeout` from coreutils.

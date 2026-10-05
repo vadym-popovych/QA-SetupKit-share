@@ -12,6 +12,9 @@ MCP-configurations/mcp-sheets/token.json
 MCP-configurations/grafana/.token
 # Redmine (tracker.example.com) API key
 MCP-configurations/redmine/.token
+# Every service's token, present and future — listing them one by one is how a NEW service
+# ends up untracked-but-unignored right before a paste (caught 17/08/2026, figma).
+MCP-configurations/*/.token
 # Mega.nz account credentials
 MCP-configurations/mega/credentials.json
 # Test-account pools hold passwords (users.json is credentials by convention, everywhere;

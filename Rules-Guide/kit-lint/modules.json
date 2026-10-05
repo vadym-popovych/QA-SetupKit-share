@@ -54,6 +54,9 @@
     "QA-Documentation/Custom-Reports/Test-Report": {
       "badge": "stable"
     },
+    "QA-Documentation/Custom-Reports/Design-Conformance": {
+      "badge": "draft"
+    },
     "Testing-Types/App-Emulators-configurations": {
       "badge": "battle-tested",
       "evidence": "two mobile apps driven on iOS + Android simulators against real builds; its rules were rewritten from field failures (a Maestro crash reading as a false PASS)"

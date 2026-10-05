@@ -107,8 +107,29 @@ notify() { osascript -e "display notification \"$1\" with title \"durable-resume
 {
   echo "$(date '+%F %T') fire: $LABEL (unattended=$UNATTENDED retry=$RETRY)"
   if ! mkdir "${HANDOFF}.lock" 2>/dev/null; then
-    echo "  already claimed (in-session cron resumed first) — exiting"
-  else
+    # A lock is NOT proof of a live run. Measured 15/08/2026: the in-session layer claimed the
+    # lock at reset+2, died, and this layer read the lock at reset+5, exited "already claimed",
+    # and BOTH layers were spent with zero work produced — the silent failure this whole
+    # two-layer arrangement exists to prevent. A bare directory carries no liveness, and age
+    # cannot separate the cases either (a live 3-minute-old lock looks exactly like an orphaned
+    # one). So do not trust the lock: watch for PROGRESS. A real run writes something —
+    # the RESULT file, a report, an artefact — well inside a quarter of an hour.
+    echo "  lock present — watching ${STALE_CHECKS:-3}x${STALE_EVERY:-300}s for signs of a live run"
+    CLAIMED=0
+    for _i in $(seq 1 "${STALE_CHECKS:-3}"); do
+      sleep "${STALE_EVERY:-300}"
+      if [ -s "$RESULT" ]; then echo "  ${RESULT} is being written — a live run owns this, standing down"; CLAIMED=1; break; fi
+      if [ -n "$(find "$WORKDIR" -newer "${HANDOFF}.lock" -type f -not -path '*/.git/*' -not -name '*.lock' -print -quit 2>/dev/null)" ]; then
+        echo "  files changed since the lock was taken — a live run owns this, standing down"; CLAIMED=1; break
+      fi
+    done
+    if [ "$CLAIMED" = "0" ]; then
+      echo "  no output and no file touched since the lock was taken — treating it as orphaned, claiming it"
+      rmdir "${HANDOFF}.lock" 2>/dev/null || true
+      mkdir "${HANDOFF}.lock" 2>/dev/null || true
+    fi
+  fi
+  if [ "${CLAIMED:-0}" = "0" ]; then
     cd "$WORKDIR"
     OUT="$(mktemp)"
     FLAGS=()

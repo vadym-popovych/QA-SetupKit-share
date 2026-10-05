@@ -55,8 +55,18 @@ That port has not been written or tested here; treat it as work, not a flag.
    coordination lock FIRST (`mkdir <handoff>.lock`; mkdir fails → another runner owns
    the task, stand down). Fires only while the session process is alive.
    **(b)** `durable-resume.sh <reset+5min> <handoff> [label] --unattended` — a launchd
-   job that survives a dead session: an existing lock → it backs off; a dead session →
+   job that survives a dead session: a **live** run → it backs off; a dead session →
    it runs headless. Whoever runs releases the lock at finish/stop.
+   **A lock is not proof of a live run, so layer (b) does not accept one at face value.**
+   Measured 15/08/2026: layer (a) claimed the lock at reset+2, died, layer (b) read the lock at
+   reset+5, logged "already claimed" and exited — both layers spent, zero work, and the RESULT
+   file that would have shown it never existed either. Age cannot separate the cases (a live
+   three-minute-old lock and an orphaned one look identical), so the runner watches for
+   **progress** instead: on finding a lock it polls `STALE_CHECKS`×`STALE_EVERY` (default 3×300 s)
+   for the RESULT file growing or ANY file under the workspace changing since the lock was taken.
+   Something moves → a real run owns it, stand down. Fifteen minutes of complete silence → the
+   lock is orphaned, claim it and run. A live run always writes something inside that window;
+   a dead tab never does.
    **Another chat already has a resume armed → STAGGER, never collide.** Before arming,
    list what is already scheduled (`ls ~/Library/LaunchAgents/com.claude.durable-resume.*`
    on macOS, or whatever your platform's job list is). The lock does NOT protect you here:

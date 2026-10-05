@@ -1,0 +1,140 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "design-conformance.schema.json",
+  "title": "Design-conformance findings",
+  "description": "The canon behind a Design-Conformance report. The published page is a PROJECTION of this file — fix a claim here and rebuild, never hand-edit the generated HTML. Prose fields accept inline HTML and are rendered, not escaped. NOTE: the kit validator implements a deliberately small keyword set (no $ref / oneOf / if-then), so two rules that cannot be expressed here are enforced by dc-report.mjs at build time instead, and it fails closed on both: a finding carrying `impact` must also carry `severitySource`, and every clip file named must exist.",
+  "type": "object",
+  "required": ["title", "headline", "findings"],
+  "additionalProperties": true,
+  "properties": {
+    "_comment": { "type": "string" },
+    "title": { "type": "string", "minLength": 1, "description": "Browser-tab / gallery name for the page." },
+    "eyebrow": { "type": "string" },
+    "headline": { "type": "string", "minLength": 1 },
+    "standfirst": { "type": "string" },
+    "findingsTitle": { "type": "string" },
+    "coverageTitle": { "type": "string" },
+    "coverageLede": { "type": "string" },
+    "footer": { "type": "string" },
+
+    "meta": {
+      "type": "array",
+      "description": "Identity of both sides. A round that does not record WHICH design export it judged cannot be re-checked later.",
+      "items": {
+        "type": "object",
+        "required": ["label", "value"],
+        "additionalProperties": false,
+        "properties": { "label": { "type": "string" }, "value": { "type": "string" } }
+      }
+    },
+
+    "tally": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["n", "label"],
+        "additionalProperties": false,
+        "properties": {
+          "n": { "type": "string" },
+          "label": { "type": "string" },
+          "tone": { "enum": ["crit", "warn", "ok", "mute", "acc"] }
+        }
+      }
+    },
+
+    "findings": {
+      "type": "array",
+      "minItems": 1,
+      "description": "One entry per oracle conflict. Both sides are stated and the report does not pick the winner.",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "requires", "observed"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
+          "story": { "type": "string", "description": "The requirement this is judged against, as the spec names it." },
+          "title": { "type": "string", "minLength": 1 },
+          "_field_notes": { "type": "string" },
+
+          "impact": { "type": "string", "description": "Chip text. Impact is a judgement someone owns, never a fact about the product." },
+          "impactClass": { "enum": ["crit", "warn", "ok", "mute", "acc"] },
+          "severitySource": {
+            "enum": ["owner", "agent-proposed"],
+            "description": "REQUIRED whenever impact is set — dc-report.mjs refuses to build without it. Stays 'agent-proposed' until the owner has actually rated it; an unattributed rating reads as the owner's own call by the second meeting."
+          },
+
+          "requiresLabel": { "type": "string" },
+          "requires": {
+            "type": "array",
+            "minItems": 1,
+            "description": "What the spec requires, QUOTED — one entry per quoted criterion. Paraphrase is where the reviewer's opinion leaks in, and the quote is what the owner will argue about.",
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "observed": {
+            "type": "array",
+            "minItems": 1,
+            "description": "What the design does, as observed while DRIVING it — not as read off its markup.",
+            "items": { "type": "string", "minLength": 1 }
+          },
+
+          "clips": {
+            "type": "array",
+            "description": "Evidence. Any claim about a flow — skipped, blocked, refused, reachable — needs one.",
+            "items": {
+              "type": "object",
+              "required": ["file"],
+              "additionalProperties": false,
+              "properties": {
+                "file": { "type": "string", "minLength": 1, "description": "Filename inside the evidence dir; the builder refuses to build if it is missing." },
+                "poster": { "type": "string", "description": "Frame showing the state that PROVES the finding — not wherever the clip happens to end." },
+                "caption": { "type": "string" }
+              }
+            }
+          },
+
+          "notes": { "type": "array", "items": { "type": "string" } },
+          "decisionLabel": { "type": "string" },
+          "decision": { "type": "string", "description": "Who decides and what the options are. The report proposes; it does not rule." }
+        }
+      }
+    },
+
+    "coverageColumns": { "type": "array", "items": { "type": "string" } },
+    "coverage": {
+      "type": "array",
+      "description": "Rows of the coverage table. 'Declared but unreachable' is reported as NOT VERIFIED, never as covered.",
+      "items": { "type": "array", "items": { "type": "string" } }
+    },
+
+    "sectionsBefore": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["title"],
+        "additionalProperties": false,
+        "properties": {
+          "title": { "type": "string" },
+          "lede": { "type": "string" },
+          "body": { "type": "array", "items": { "type": "string" } },
+          "list": { "type": "array", "items": { "type": "string" } },
+          "ordered": { "type": "boolean" }
+        }
+      }
+    },
+    "sectionsAfter": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["title"],
+        "additionalProperties": false,
+        "properties": {
+          "title": { "type": "string" },
+          "lede": { "type": "string" },
+          "body": { "type": "array", "items": { "type": "string" } },
+          "list": { "type": "array", "items": { "type": "string" } },
+          "ordered": { "type": "boolean" }
+        }
+      }
+    }
+  }
+}

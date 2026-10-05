@@ -1,6 +1,6 @@
 # MCP configurations
 
-Single index of every MCP server used in this workspace — where it's configured, what it does, and how to re-bind it on a new machine. **§1–§6 are the MCP servers; §7–§10 are the non-MCP API integrations that share this folder** — listed here because that is where a reader looks for "how does the kit talk to service X", and an integration missing from the index is an integration a teammate never finds.
+Single index of every MCP server used in this workspace — where it's configured, what it does, and how to re-bind it on a new machine. **§1–§6 and §11 are the MCP servers, §12 is an account-level Claude connector; §7–§10 are the non-MCP API integrations that share this folder** — listed here because that is where a reader looks for "how does the kit talk to service X", and an integration missing from the index is an integration a teammate never finds.
 
 Every folder in this directory, one row each — this table is a **generated projection** of the
 folder list (`kit-lint` L12 keeps it honest; a folder added without a row here fails the lint).
@@ -18,6 +18,8 @@ their sections below.
 | [`cloudflare/`](cloudflare/) | §8 | Cloudflare Pages API token for publishing HTML reports — gitignored `.token` |
 | [`redmine/`](redmine/) | §9 | Redmine REST API key for bug filing — gitignored `.token` |
 | [`pagespeed/`](pagespeed/) | §10 | PageSpeed Insights API key for the PSI collector — gitignored `.token` |
+| [`chrome-devtools/`](chrome-devtools/) | §11 | Chrome DevTools MCP — guide only, `npx`-fetched, no credentials |
+| [`slack/`](slack/) | §12 | Slack — the official Claude connector (OAuth, account-level); guide only, no server and no secret |
 <!-- /kit:generated -->
 
 ## 1. `google-sheets` — local Node server (Sheets + Drive + Docs write)
@@ -152,6 +154,52 @@ Reads a Grafana instance — dashboards, datasources, Prometheus/Loki metrics, r
 ```
 Verified live 01/07/2026: `list_datasources` → 13 sources incl. **`grafanacloud-k6`** (k6 cloud runs) and `grafanacloud-prom`. Full guide + current-setup details: [`grafana/README.md`](grafana/README.md).
 
+## 11. `chrome-devtools` — Chrome DevTools MCP (live, interactive browser control)
+
+Local, stateful Chrome session — navigate, click, read console/network, screenshot — driven one tool call at a time, instead of hand-writing a Playwright script for every ad-hoc check. **Complements, not replaces** the kit's scripted Playwright tools (E2E specs, `record-network-bug.mjs`, the PageSpeed collector), which stay the codified path for anything re-run or feeding a report. Full guide: [`chrome-devtools/README.md`](chrome-devtools/README.md).
+
+| Property | Value |
+|----------|-------|
+| Type | Local process (stdio), launched fresh via `npx` — no hosted URL |
+| Command | `npx -y chrome-devtools-mcp@latest` |
+| Doc folder | [`chrome-devtools/`](chrome-devtools/) — README only, no source code |
+| Auth | None — controls a local Chrome instance over CDP |
+| Registered in | `<workspace>/.mcp.json` (workspace root) |
+| Restart after change | Yes — quit + reopen Claude Code, then `/mcp` |
+
+**Snippet in workspace `.mcp.json`:**
+```json
+"chrome-devtools": {
+  "command": "npx",
+  "args": ["-y", "chrome-devtools-mcp@latest"]
+}
+```
+No secrets, no per-user setup — every teammate's `npx` fetches the same package. Full guide (options, failure modes, when to use this vs. the kit's Playwright scripts): [`chrome-devtools/README.md`](chrome-devtools/README.md).
+
+---
+
+## 12. `slack` — Slack (official Claude connector)
+
+Reads a Slack workspace — channels, threads, messages, files, users — so a link a teammate pasted can
+be opened directly. **Nothing is installed and no secret lives here:** Slack is an official connector,
+authorised once in the browser over OAuth, and it then appears to Claude Code as `claude.ai Slack`,
+exactly like Google Drive and Figma (§3, §4). Full guide: [`slack/README.md`](slack/README.md).
+
+| Property | Value |
+|----------|-------|
+| Type | Account-level Claude connector (server-side; no local process) |
+| Setup | claude.ai → **Customize → Connectors → Slack → Connect** (an org owner enables it first) |
+| Doc folder | [`slack/`](slack/) — README only, no source, no credentials |
+| Auth | OAuth, scoped and revocable; each teammate authorises their own |
+| Registered in | **nothing** — connectors attach to the account, not to `.mcp.json` |
+| Verify | `claude mcp list` → `claude.ai Slack` = Connected |
+
+⚠️ **Not the community `xoxc`/`xoxd` browser-token server.** It needs no admin approval, which is why
+it is tempting, but the token is a **live session** — unscopable, unrotatable, revoked only by logging
+your own browser out — and it carries the whole account, including posting as you. The kit used it for
+one day (27/08/2026) and replaced it the same day; the reasoning is written down in
+[`slack/README.md`](slack/README.md) so the question is not re-opened from scratch.
+
 ---
 
 ## Non-MCP integrations (§7–§10) — same folder, same secret convention
@@ -240,8 +288,9 @@ For teammate handoffs (different machine / different Google account) the flow is
    - Verify `<workspace>/.mcp.json` absolute path matches your clone location.
 3. **`figma-dev-mode-mcp-server`**: enable toggle in Figma Desktop → snippet is already in workspace `.mcp.json` (§2), nothing else to add.
 4. **claude.ai connectors** (§3, §4): one-time OAuth in browser.
-5. Quit + reopen Claude Code → `/mcp` to confirm all servers `connected`.
-6. **§7–§10 are deliberately NOT part of this bootstrap** — set one up the first time a kit asks for it (evidence upload, report publishing, bug filing, a PageSpeed round). Each is one gitignored secret file created from its own folder README, and none of them needs a restart.
+5. **`chrome-devtools`** (§11): nothing to set up — snippet is already in workspace `.mcp.json`, `npx` fetches the package on first use.
+6. Quit + reopen Claude Code → `/mcp` to confirm all servers `connected`.
+7. **§7–§10 are deliberately NOT part of this bootstrap** — set one up the first time a kit asks for it (evidence upload, report publishing, bug filing, a PageSpeed round). Each is one gitignored secret file created from its own folder README, and none of them needs a restart.
 
 ## Useful checks
 

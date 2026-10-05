@@ -312,7 +312,7 @@ for (const doc of docs) {
 // a broken template. This runs validate.mjs over each one — the checker checking its own examples.
 import { spawnSync as _spawn } from 'node:child_process';
 const VALIDATE = path.join(ROOT, 'Rules-Guide/schemas/validate.mjs');
-const SCHEMA_OF = { bug: 'bug', 'test-case': 'test-case', 'run-result': 'run-result', 'checklist-row': 'checklist-row', coverage: 'coverage', strategy: 'strategy', 'pagespeed-round': 'pagespeed-round', 'bug-summary': 'bug-summary', 'test-report': 'test-report', 'link-ledger': 'link-ledger', 'bug-spec': 'bug-spec', 'bug-spec-backend': 'bug-spec' };
+const SCHEMA_OF = { bug: 'bug', 'test-case': 'test-case', 'run-result': 'run-result', 'checklist-row': 'checklist-row', coverage: 'coverage', strategy: 'strategy', 'pagespeed-round': 'pagespeed-round', 'bug-summary': 'bug-summary', 'test-report': 'test-report', 'link-ledger': 'link-ledger', 'bug-spec': 'bug-spec', 'bug-spec-backend': 'bug-spec', 'findings': 'design-conformance' };
 if (fs.existsSync(VALIDATE)) {
   for (const f of all.filter((x) => x.endsWith('.example.json'))) {
     const kind = SCHEMA_OF[path.basename(f).replace(/\.example\.json$/, '')];

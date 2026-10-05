@@ -143,6 +143,15 @@ When a check is confirmed `Failed`:
    rect + arrow on the problem zone, green rect on the expected/reference zone, chip
    labels ("Actual…" / "Expected…"); annotated link goes FIRST (bold) in `Evidence`.
    Reference tool: `<Project>/Emulator-Testing/tools/annotate.py` (Pillow, JSON spec).
+   **Take the box from the CAPTURED HIERARCHY, not from eyeballed pixels** —
+   `template/tools/annotate-from-hierarchy.mjs` matches an element by its visible text in the
+   `.json` dump that `probe.sh` saved beside the screenshot, converts the node's bounds from
+   points to image pixels (the scale comes from the dump's own root node, so it is right on any
+   device class), and draws the rect and the arrow through `annotate.py`. A box drawn by hand is
+   wrong the next time the layout shifts and cannot be regenerated; this one can. It refuses
+   loudly when nothing matched, which is itself useful — a selector that matches nothing is
+   usually a sign the screen is not the one you think it is. Fall back to an explicit `rect`
+   (in points) only for something the tree does not expose, such as a decorative placeholder.
 6. **Extra file-hosting channels (Mega etc., Vadym, 11/07/2026):** when evidence
    is also shared via a generic file host, use the fixed structure
    `Attachments/<Project name>/<Screenshots | Screen records>/<dd.mm.yyyy>/` with file
@@ -163,6 +172,76 @@ When a check is confirmed `Failed`:
    variant** (same platform/state we expect); if the design itself carries the other
    variant (e.g. iOS copy while the bug is Android), use a single annotated app
    screenshot instead (Vadym, 11/07/2026).
+7b. **A bug whose point is a SEQUENCE is recorded, not screenshotted (Vadym, 22/09/2026):**
+   "confirm → nothing happens", "set it → go back → it is gone", "retry → fails again" cannot be
+   proved by stills — a reader cannot tell a missing step from a missing frame.
+   `template/tools/record-repro.sh <flow.yaml> <name> [udid]` starts the screen recording, drives
+   the Maestro flow, and stops the recorder with SIGINT (a `kill -9` leaves an unplayable file);
+   the clip lands in `runs/<date>/clips/`. **Put the assertions in the flow**, not only in the
+   description: a clip whose flow asserted each state on the way is evidence that the sequence
+   really happened, while a clip of an unasserted flow is just a video of someone tapping.
+   Clips upload as `Screen records` through the same `--evidence` path (§6).
+   **Cut the dead air before anyone sees it.** The recorder is rolling while the driver boots, so a
+   raw capture opens with ~10 s of a motionless screen and the reviewer reads that as "nothing
+   happens" — the owner's first remark on the first batch (22/09/2026) was exactly this.
+   `record-repro.sh` therefore ends by calling `template/tools/trim-dead-air.sh`, which keeps ~1 s
+   of lead-in before the first movement and 1.5 s of tail (`NO_TRIM=1` keeps the raw capture).
+   It trims in up to 3 passes and re-measures each time: one stray flicker early in the capture —
+   a status-bar clock tick, the driver's own first screenshot — satisfies the motion test while the
+   screen is still idle, so a single measured cut can leave seconds of stillness behind. Measuring
+   once and trusting it is exactly what left 2 s in the first attempt.
+   **A clip shows its taps (Vadym, 05/10/2026).** The reader must see WHERE each step touched,
+   the way Android's "Show taps" (and the web kit's tap dots, WEB_TESTING_RULES r.13) show it.
+   The iOS simulator records none: `simctl io recordVideo` captures the device framebuffer, and
+   Simulator.app's touch circles live on its window, while Maestro taps through XCTest, not the
+   mouse. So both recorders (`record-repro.sh`, `record-with-network.py`) end with
+   `template/tools/tap-overlay.py`, which reads every `Tapping x, y` line (wall-clock time + point)
+   from Maestro's `xctest_runner_*.log` and draws a dot there on the clip (`NO_TAPS=1` skips it).
+   It runs BEFORE the dead-air trim, while the clip still starts at the recorded `t0`, and
+   resamples to a constant 30 fps first — simctl writes frames only when the screen changes, so a
+   dot on a still screen would otherwise never be drawn. On Android turn on the platform's own
+   indicator instead: `adb shell settings put system show_touches 1`. The dot is also a check of
+   the flow itself: measured 01/10, a `tapOn: ".*Try again.*"` drew its dot on the error TEXT,
+   not the button (the regex matched the parent node) — the retry the flow claimed never
+   happened, which a tap-less clip hid.
+   **Do not record a destructive repro just for the clip** — if the action is irreversible and the
+   defect is that it does nothing, a re-run risks it working this time and taking the round's
+   environment with it. Ask the owner first.
+7c. **Evidence is CHOSEN, not accumulated — one primary item per bug (Vadym, 29/09/2026):**
+   a bug report carries the ONE form that proves it, picked by the bug's shape:
+   - **steps / a change over time** (recalculation after an edit, state while loading, appears →
+     disappears, confirm → nothing) → **one video** of the whole repro (§7b), optionally plus one
+     annotated still of the decisive frame;
+   - **a static wrong state that the design shows correctly** → **one collage** (§7): the design
+     panel as the reference with GREEN rect + arrows, the app/site panel with RED rect + arrows,
+     in ONE image;
+   - **a static wrong state with no design reference** → **one annotated screenshot**.
+   **Raw exploration captures (`probe/NNN-…png`) never go into a report** — they are working
+   material and stay in `runs/`. Five raw stills of different moments tell the reader to do the
+   reconstruction the reporter skipped; the owner's remark that triggered this rule was exactly
+   "why so many screenshots, why no video". A second item is justified only when it proves
+   something the first cannot (e.g. the API response behind a backend bug).
+   **How the collage is built (the method the owner approved, 29/09/2026):**
+   1. **Re-check on the CURRENT build first.** Redoing evidence is a re-test: capture the app side
+      on today's code, and if the defect is gone, do not make evidence — mark the candidate
+      `Not reproduced/Fixed` (BUG_REPORTS_RULES, candidates sheet) with the build in the comment.
+   2. **Design side — from the DOM:** `template/tools/design-rect.mjs <frameId> <out.png> "<text>"…`
+      renders the frame of the HTML design export and prints each element's rect in that PNG's own
+      pixels. **Read the design frame before writing the bug text** — it is the oracle, and it can
+      contradict the report (measured: a "the banner should say Renew" claim that the design itself
+      did not make; the claim was cut, the rest of the defect stood).
+   3. **App side — from the captured hierarchy** (`annotate-from-hierarchy.mjs`, §3.5); an explicit
+      rect only for an element the tree does not expose, said so in the working notes.
+   4. **One image, two panels, left design / right app**, via `collage.py`: chips read
+      `DESIGN — <state> (expected)` and `APP <flavour> @ <commit> — <state> (actual)`; GREEN rect +
+      arrow + short label on each designed element, RED on each deviating one, labels saying what
+      differs ("badge: EXPIRED" | "badge: LAPSED"), not "expected"/"actual" again.
+   5. **Look at the rendered collage before uploading** — the chip must not cover the element it
+      names, and every box must sit on its element.
+   **How the video is made:** `record-repro.sh` over an ASSERTED Maestro flow (§7b), dead air cut,
+   one clip per bug covering the whole repro from its first precondition screen; upload as
+   `Screen records` (§6). The video is the primary item; one annotated still of the decisive frame
+   may follow it.
 8. **Text/copy bugs — UNDERLINE the problematic word (Vadym, 11/07/2026):** in addition
    to the red frame around the text zone, always underline the specific wrong
    word/phrase (annotate.py `underline` type) so the accent lands exactly on the
@@ -204,6 +283,75 @@ When a check is confirmed `Failed`:
 - If a task seems to need writing to the project repo, STOP and ask the user — default is
   hands-off.
 
+## 5.1 Device builds, proxy builds and request-timeline clips (measured 25–30/09/2026)
+
+All three are QA-local variants built from the git-less snapshot (§5) — never committed, never
+proposed to the team without the owner — and each one says in the hand-over which build it is.
+
+- **A build on the owner's own phone when the team's signing team is not on this Mac.** In the
+  SNAPSHOT: set `DEVELOPMENT_TEAM` to the owner's Personal Team and give the bundle id a suffix
+  (`<id>.<qa>`) so it installs NEXT to the team's distribution build instead of replacing it.
+  Build with `xcodebuild … -destination 'id=<device udid>' -allowProvisioningUpdates
+  -allowProvisioningDeviceRegistration` — **`flutter build ios` alone may embed a profile for a
+  DIFFERENT device** (install error `0xe8008012`). Check `ProvisionedDevices` in
+  `embedded.mobileprovision` before installing. Install over Wi-Fi with
+  `xcrun devicectl device install app --device <udid> <app>`; "device is locked" / error 4016 =
+  the phone is locked or on another network — retry in a loop, tell the owner. A free profile
+  lasts **7 days**; first launch needs Settings → VPN & Device Management → Trust. A different
+  bundle id can break social sign-in — a failure there is the workaround's, never a candidate.
+  When the phone is unreachable, `-destination 'generic/platform=iOS'` still builds against the
+  already-registered profile.
+- **Seeing the app's own requests in Charles / mitmproxy.** Flutter's `dart:io` HttpClient
+  **ignores the iOS system proxy** — only native SDK calls (Firebase, Google Sign-In) show up.
+  QA proxy build = in the snapshot, give the app's single HTTP client an adapter that honours a
+  `--dart-define`, e.g. for Dio:
+  ```dart
+  const qaProxy = String.fromEnvironment('QA_PROXY');
+  if (qaProxy.isNotEmpty) {
+    dio.httpClientAdapter = IOHttpClientAdapter(createHttpClient: () => HttpClient()
+      ..findProxy = ((_) => 'PROXY $qaProxy')
+      ..badCertificateCallback = ((_, __, ___) => true));   // QA-only: lets the proxy decrypt
+  }
+  ```
+  then `flutter build ios --config-only … --dart-define=QA_PROXY=<host>:<port>` + xcodebuild.
+  **Phone: the proxy is the Mac's LAN IP — re-read `ipconfig getifaddr en0` before every build**
+  (it changes with the network, and a stale IP silently breaks every API call). **Simulator:
+  `127.0.0.1`** (it shares the Mac's network — stable). Give the phone build a distinct
+  home-screen name (`CFBundleDisplayName` via PlistBuddy in the snapshot; never `PRODUCT_NAME`,
+  build scripts key on it) — the project records the name. Charles also needs SSL Proxying for
+  the API host. The same finding seen only through the proxy build is re-checked on a normal
+  build before it becomes a candidate.
+- **Request-timeline clips — the screen and the requests in one video** (owner, 30/09/2026).
+  For timing bugs ("spins, then errors", "slow search"), a clip without the requests cannot show
+  WHO gave up. Pipeline, all in `template/tools/`:
+  1. `mitmdump -p 8080 -s net-timeline-addon.py --set netlog=<run>/net-timeline.jsonl
+     --set nethost=<api host>` — one JSON line per request with wall-clock start/end, status,
+     bytes, and `err: "client closed"` when the APP abandoned it (a client-side timeout);
+  2. the simulator build routed to `127.0.0.1:8080` (above);
+  3. `python3 record-with-network.py <flow.yaml> <clip.mp4> --netlog <jsonl> --udid <sim>` —
+     records, drives the Maestro flow, stops with SIGINT, keeps the requests of that window;
+     **no dead-air trim here** (a cut breaks the sync); the taps are drawn in (`tap-overlay.py`, §3.7b);
+  4. `python3 net-compose.py <clip.mp4> --host <api host> --timeout <client timeout s>` — app
+     left, live request panel right (running timer while pending, then status + duration, a
+     tick at the client's timeout). Pillow + plain ffmpeg `hstack`; no `drawtext` needed.
+  Read the client's timeouts from the code first (e.g. `receiveTimeout`) — "the error appears
+  after exactly N s while the request is still running" is usually that number.
+  Intermittent failures are caught by looping step 3 with a new query per try and keeping only
+  a clip whose timeline holds a failure. **"client closed" is not automatically a failure:** an
+  app abandons requests on its own (a debounced search re-fires while the user types) — measured
+  30/09: a search cancelled after 0.76 s and re-sent, 200 in 0.26 s. Only an abort at or after
+  the client timeout is a timeout; `record-with-network.py --min-timeout` and `net-compose.py
+  --timeout` draw exactly that line (grey "cancelled by the app" vs red "client timeout").
+  **Full detail (owner, 01/10/2026):** add `--set netbodies=true -w <run>/full-dump.mitm` to
+  step 1. Every line then carries the connection phases (server IP, new/reused connection,
+  request fully sent, first response byte), correlation headers (`CF-RAY`, request id) and the
+  first 400 chars of both bodies, and the panel shows them ("sent +0.00s · NO answer from
+  server"). That turns "the app timed out" into WHERE it hung: connection up + request sent +
+  no first byte = the backend does not answer (measured 01/10: fresh TLS in 45 ms, request sent,
+  0 bytes in 20 s). The `.mitm` dump opens in `mitmweb -r <file>` like a Charles session, but it
+  holds the account's bearer token — **it stays on the machine, it is never uploaded as
+  evidence**; the clip and the JSON lines never carry Authorization or cookies.
+
 ## 5.5 Runner verdicts: never trust "no FAILED in log" alone (Vadym, 11/07/2026)
 
 - A Maestro process can CRASH (Java stack trace, no "FAILED" text) — a log-grep-only
@@ -213,6 +361,83 @@ When a check is confirmed `Failed`:
   the intended screen was never reached (e.g. a coordinate tap missed and the final
   assert matched the previous screen). For coordinate taps, always verify the
   screenshot actually shows the target screen before marking the check Passed.
+
+## 5.6 Driving traps: a step can report COMPLETED and have done nothing (measured 22/09/2026)
+
+Both of these cost a working session before they were named. Both are silent: the runner
+says COMPLETED, so a log-only check calls the step done. §5.5's rule generalises here —
+**verify the effect, not the report.**
+
+- **A label repeated inside one node.** Flutter/iOS commonly exposes a control's label
+  twice in the same node (`"Next\nNext"`), and Maestro's `text:` matcher is a
+  **full-string** regex — so `tapOn: "Next"` matches nothing and the step fails, while
+  `tapOn: "(?s)Next.*"` hits it. Read the label from `hierarchy` before writing a
+  selector, and use the `(?s)…​.*` form for any label the dump shows doubled. When a
+  selector still misses, fall back to a point tap and verify per §5.5.
+- **`inputText` can land nothing.** With a non-Latin software keyboard active on the
+  simulator (the host's input source propagates), `inputText` reports COMPLETED while
+  the field stays empty — and a screen whose submit button is disabled-while-empty then
+  simply looks unresponsive. **Enter text through the pasteboard instead**:
+  `printf '%s' "$VALUE" | xcrun simctl pbcopy <UDID>` then long-press the field →
+  *Paste*. **Read the field back before submitting** — against a login form this failure
+  burns real authentication attempts and can lock the account out.
+- **`eraseText: N` does not reliably clear a field.** A paste after a partial erase
+  merges with the remains and submits a value nobody typed. Assert the field reads empty
+  first.
+- **The simulator syncs the HOST's pasteboard, so the value you copied is not necessarily
+  the value that pastes.** Anything the person at the keyboard copies on the Mac — a note,
+  a chat line, a password from somewhere else — replaces what `pbcopy` put there, and the
+  next *Paste* lands THAT into the field under test. Measured 22/09/2026: an unrelated
+  paragraph copied on the host appeared in a live Google sign-in field mid-run. Two rules
+  follow: keep `pbcopy` and the paste **in one command** so nothing can slip between them,
+  and **reveal what actually landed before submitting** (a password field has a *Show
+  password* control for exactly this). It also means a run can leak the operator's own
+  clipboard into someone else's form — one more reason the value is read back, not assumed.
+- **A rejected credential is a claim about the credential ONLY after the field is read
+  back.** "Wrong password" and "the paste missed" look identical from the outside. Reveal
+  the field, compare it against the stored value, and only then report the credential as
+  wrong — and stop after two or three failures, because a shared test account that locks
+  out blocks every future round, not just this one.
+- **A tap by PERCENTAGE goes stale, and a missed tap is indistinguishable from a dead
+  control.** Coordinates read from one `hierarchy` dump are only valid while the scroll
+  offset that produced them holds; a list that settles, reflows or bounces between the
+  read and the tap moves the target, and the tap lands on empty space. Nothing fails —
+  the runner reports COMPLETED and the screen is unchanged, which reads exactly like
+  "this control does nothing", and that is how a working control gets written up as a
+  bug. Two defences: put the scroll and the tap **in the same flow** and address the
+  target by `tapOn: {text: "<label>", index: N}` rather than by point, counting the index
+  over what is actually on screen; and **re-read the render** after any tap that was
+  supposed to change a selection. Reserve `tap-at` for controls that expose no usable
+  name — some expose their *state* instead of their text (a toggle labelled `"0"`/`"1"`),
+  and those cannot be selected any other way.
+  **Before writing up any control as dead, run a POSITIVE CONTROL on the same screen** — tap a
+  neighbouring control you already know works and check it responds. If it does, the silence you
+  are looking at is a miss until re-measuring says otherwise; if it does not, the screen itself is
+  not taking taps and nothing on it can be judged. Without that control step a working,
+  destructive control reads exactly like a broken one, and the resulting ticket is worse than no
+  ticket: it sends a developer looking for a defect that is not there, and it buries the real
+  defect sitting next to it.
+
+The scaffold's [`template/tools/probe.sh`](template/tools/probe.sh) exists for exactly this
+loop — act, capture, and print the screen's own labels back — so an exploratory pass leaves
+the same evidence trail a scripted round does, inside `runs/<date>/probe/` rather than
+scattered across the working directory.
+
+More traps measured 29–30/09/2026, all silent in the same way:
+
+- **A tap lands on the bottom tab bar.** `scrollUntilVisible` stops as soon as the element is
+  on screen — often UNDER a floating tab bar — and the tap opens another tab (it looked like
+  "the row does nothing"). Add `centerElement: true` to the scroll before tapping a list row.
+- **iOS system dialogs** ("<App> wants to use google.com to sign in") and the in-app browser are
+  outside the app's tree: read them from a full-screen `simctl io screenshot` and tap by point.
+- **Maestro reads a flow from a FILE** — a shell process substitution `<(…)` runs nothing and
+  the probe captures whatever screen was already up. Write the flow to the scratchpad.
+- **The Maestro MCP driver can lose its port** ("Failed to connect to 127.0.0.1:<port>") while
+  the CLI still works — fall back to `probe.sh` / `maestro test`.
+- **A simulator recording has frames only where the screen changed** — seeking past the last
+  change (`ffmpeg -ss` near the end) yields nothing, and a trimmed repro can end at the last
+  motion rather than at the flow's last assertion. Judge the end state from the flow's
+  assertions or a final `simctl io screenshot`, not from the clip's last frame.
 
 ## 6. Hygiene
 

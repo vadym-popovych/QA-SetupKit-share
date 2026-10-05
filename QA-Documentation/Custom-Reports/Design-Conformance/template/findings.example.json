@@ -1,0 +1,124 @@
+{
+  "_comment": "Design-Conformance findings — copy to <Project>/QA-Documentation/design-review/findings.json and replace. Every value here is a placeholder; nothing in this file names a real project. Fields marked REQUIRED are enforced by dc-report.mjs, which refuses to build without them. Prose fields accept inline HTML (<b>, <em>, <code>) — it is rendered, not escaped.",
+
+  "title": "<Project> Design Conformance",
+  "eyebrow": "Design ↔ stories · round 1 · <dd Mon yyyy>",
+  "headline": "<the one-line finding of the whole round>",
+  "standfirst": "<what was compared, and the one methodological fact a reader needs before the findings>",
+
+  "meta": [
+    { "label": "Requirement side", "value": "<spec file> @ <code>&lt;branch commit&gt;</code><br><date>" },
+    { "label": "Design side", "value": "<bundle filename><br>sha256 <code>&lt;first 16 hex&gt;</code>" },
+    { "label": "Scope", "value": "Stories <b>&lt;first&gt; – &lt;last&gt;</b>" },
+    { "label": "Status", "value": "Findings for owner review.<br><b>Nothing filed, nothing pushed.</b>" }
+  ],
+
+  "tally": [
+    { "n": "2", "tone": "crit", "label": "Conflicts with a<br>client decision" },
+    { "n": "1", "tone": "warn", "label": "Build defects" },
+    { "n": "9", "tone": "ok", "label": "of 12 stories<br>reachable &amp; matching" },
+    { "n": "2", "tone": "mute", "label": "Not verifiable<br>from this build" }
+  ],
+
+  "sectionsBefore": [
+    {
+      "title": "How this was checked",
+      "lede": "<the method, in one sentence — driven in a real browser, judged by what rendered>",
+      "body": [
+        "<whether the bundle ships its own data-story-id annotations, and therefore whether coverage below is the design's claim or the reviewer's reading>",
+        "<whether the annotations use the spec's current numbering — i.e. whether 'the design predates the decision' is available as an explanation at all>",
+        "<b>Standing rule for this report:</b> two oracles disagree and this report does not pick a winner. Impact ratings are an agent hypothesis and need owner calibration.",
+        "The dot in every clip is the harness drawing where a tap landed, not part of the product."
+      ]
+    }
+  ],
+
+  "findings": [
+    {
+      "id": "F1",
+      "story": "Story <n.n>",
+      "impact": "High impact",
+      "impactClass": "crit",
+      "severitySource": "agent-proposed",
+      "_field_notes": "impactClass ∈ crit | warn | ok | mute | acc — it colours the chip only. severitySource is REQUIRED whenever impact is set: 'owner' once they have rated it, otherwise 'agent-proposed'.",
+
+      "title": "<what disagrees, stated as a fact and readable on its own>",
+
+      "requiresLabel": "Story <n.n> (FR-<n>) requires",
+      "requires": [
+        "REQUIRED. <b>Given</b> … <b>When</b> … <b>Then</b> … — quoted from the spec, never paraphrased. Paraphrase is where the reviewer's opinion leaks in, and the quote is what the owner will argue about."
+      ],
+
+      "observed": [
+        "REQUIRED. <what the design actually does, as observed while driving it>",
+        "<the annotation that pins it down, if the bundle has one — e.g. the screen is annotated <code>SCR-0nn / STORY-n.n</code>>"
+      ],
+
+      "clips": [
+        {
+          "file": "F1-<slug>.mp4",
+          "poster": "poster-F1-<slug>.jpg",
+          "caption": "<what the reader is watching happen>"
+        }
+      ],
+
+      "notes": [
+        "<anything that softens or sharpens the finding — a mitigation, a related non-finding, a second gap on the same screen>"
+      ],
+
+      "decision": "<who decides, and what the two options are — 'the design catches up' vs 'the spec is amended'. The report proposes; it does not rule.>"
+    },
+    {
+      "id": "F2",
+      "story": "Story <n.n>",
+      "impact": "Build defect",
+      "impactClass": "warn",
+      "severitySource": "agent-proposed",
+      "title": "<a defect in the prototype build, as distinct from a spec conflict>",
+      "requiresLabel": "Story <n.n> (FR-<n>) requires",
+      "requires": ["<the AC the behaviour was judged against>"],
+      "observed": ["<what happened instead — e.g. a page error where an explanation was specified>"],
+      "clips": [{ "file": "F2-<slug>.mp4", "poster": "poster-F2-<slug>.jpg", "caption": "<the moment it fails>" }],
+      "notes": ["<why this reads as a build defect rather than a design intent — e.g. the same pattern works elsewhere in the bundle>"],
+      "decisionLabel": "Action",
+      "decision": "Prototype bug for the designer. No story change implied."
+    }
+  ],
+
+  "coverageTitle": "Coverage, story by story",
+  "coverageLede": "Read from the design's own annotations, not assumed. <n> of <m> stories have a reachable, annotated surface.",
+  "coverageColumns": ["Story", "Design surface", "Verdict"],
+  "coverage": [
+    ["<n.n>", "<what implements it> — <code>SCR-0nn</code>", "Matches"],
+    ["<n.n>", "<entry point only>", "Entry present, <b>result states unreachable</b>"],
+    ["<n.n>", "manifest lists <code>SCR-0nn</code>", "<b>Declared, not reachable</b> — not verified"],
+    ["<n.n>", "no screen", "Correctly absent (backend)"],
+    ["<n.n>", "<surface>", "<b>Conflict → F1</b>"]
+  ],
+
+  "sectionsAfter": [
+    {
+      "title": "Where the design is ahead of the document",
+      "lede": "Report the good news too — a conformance report that only lists failures is read as adversarial, and a stale open item stays open another month.",
+      "body": ["<an open gap in the spec that this design has in fact already closed>"]
+    },
+    {
+      "title": "Limits of this round",
+      "list": [
+        "<what was NOT measured — accessibility, performance, anything a rendered walk cannot settle>",
+        "<screens declared in the manifest but unreachable in this build — reported as not verified, never as covered>",
+        "Everything here is against <b>this</b> bundle. A newer export may differ."
+      ]
+    },
+    {
+      "title": "Open items",
+      "ordered": true,
+      "list": [
+        "<which findings are client-decision territory rather than design taste>",
+        "<what has and has not been filed or pushed>"
+      ]
+    }
+  ],
+
+  "footer": "<how to reproduce: the record script, the map script, where they live>"
+}
