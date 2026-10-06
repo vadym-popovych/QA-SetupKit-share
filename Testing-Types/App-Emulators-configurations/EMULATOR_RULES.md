@@ -197,6 +197,39 @@ When a check is confirmed `Failed`:
    mouse. So both recorders (`record-repro.sh`, `record-with-network.py`) end with
    `template/tools/tap-overlay.py`, which reads every `Tapping x, y` line (wall-clock time + point)
    from Maestro's `xctest_runner_*.log` and draws a dot there on the clip (`NO_TAPS=1` skips it).
+   The dot is the web kit's touch indicator 1:1 and picks its contrast per tap from the frame
+   under it: a dark translucent dot with a white ring on a light UI, a light one on a dark UI
+   (`--style dark|light` forces one). **Never red** — red is the bug markup in our evidence, and
+   a red dot reads as "the bug is here" (owner, 05/10/2026).
+   **EVERY touch gets a dot (owner, 05/10/2026)** — the reader sees the screen react and must see
+   what caused it. `pressKey: Enter` carries no point in the log (it is a keystroke), but on
+   screen it IS a tap on the keyboard's return key, so the tool draws it there (iOS keeps that
+   key at a fixed place per screen size) for 0.25 s, before the keyboard slides away.
+   `hideKeyboard` and swipes go out as `/swipeV2` with no logged point: the tool LISTS them as
+   "NOT drawn", and a flow written for a recording avoids them — hide the keyboard with an
+   explicit `tapOn` (its return key, or a neutral spot) so the touch is logged and drawn.
+   **Typing is taps too.** `inputText` is injected through XCTest — no key is pressed, nothing
+   is drawn, and the keyboard on screen may not even hold the letters "typed" (a Ukrainian layout
+   "typed" Latin `sense`, 01/10/2026). A flow written for a recording types key by key:
+   `template/tools/keyboard-taps.py calibrate <screenshot> <kb.json>` reads the key centres off a
+   screenshot of the open English QWERTY keyboard (once per device model; keep the json in the
+   project), and `keyboard-taps.py expand <flow> <kb.json> <out>` rewrites `inputText` into one
+   `tapOn: point` per letter (shift for capitals), `eraseText: N` into N delete taps,
+   `pressKey: Enter` into a tap on return, and refuses what it cannot press (digits, symbols,
+   `hideKeyboard`). On the clip each key gets its dot and iOS draws its own key pop-up, exactly
+   as under a real finger; the app also fires one request per letter, as it would for a user.
+   Two simulator facts it builds in (measured 05/10/2026, Xcode 27, no Simulator.app): the
+   on-screen keyboard appears only after XCTest has typed once IN THE SAME Maestro session (a new
+   session re-attaches the hardware keyboard), so `expand` adds `eraseText: 1` right after the
+   tap that focuses the field — on an empty field it deletes nothing and reads as "tap → the
+   keyboard opens"; and the layout is switched to English once with the globe key (it persists).
+   Do NOT edit the device's keyboard defaults (`AppleKeyboards` etc.) — that left the keyboard
+   unable to appear at all until reverted.
+   **A tap by text can land on a merged node.** Flutter may expose a whole block ("We couldn't
+   load … Try again") as ONE accessible node; `tapOn: "Try again"` then hits the block's centre,
+   not the button. Check the hierarchy; if the control has no node of its own, tap its point —
+   and the merge itself is worth a note for accessibility (a screen reader cannot reach the
+   button alone).
    It runs BEFORE the dead-air trim, while the clip still starts at the recorded `t0`, and
    resamples to a constant 30 fps first — simctl writes frames only when the screen changes, so a
    dot on a still screen would otherwise never be drawn. On Android turn on the platform's own

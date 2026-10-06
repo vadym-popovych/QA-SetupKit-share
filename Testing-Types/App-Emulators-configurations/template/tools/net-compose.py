@@ -53,7 +53,12 @@ for k in range(int(dur * FPS)):
     d.text((28, 94), reqs[0]["host"] if reqs else "no requests in this window", font=FS, fill=DIM)
     y = 140
     rel = lambda r, k: ((r["d"][k] - t0) / 1000) if r["d"].get(k) else None
-    for r in [r for r in reqs if r["a"] <= t][-6:]:
+    shown = [r for r in reqs if r["a"] <= t]
+    keep = 4 if any(r["d"] for r in reqs) else 7          # what fits above the legend
+    if len(shown) > keep:
+        d.text((28, 124), f"+{len(shown) - keep} earlier request(s) above", font=FS, fill=DIM)
+        y += 20
+    for r in shown[-keep:]:
         done = r["b"] is not None and r["b"] <= t
         el = (r["b"] if done else t) - r["a"]
         if not done: col, tag = AMBER, f"... {el:5.1f} s  pending"
